@@ -1,0 +1,188 @@
+% !TEX root = main.tex
+
+% AVR Simulation Results Section - To be included in chapter_results_inference_latency.tex
+
+\subsubsection{AVR Microcontroller Simulation Results}
+
+To provide a more rigorous validation of the embedded deployment feasibility, this study implements and benchmarks INT8-quantized models directly on an AVR ATmega328P architecture using cycle-accurate simulation. The ATmega328P represents the canonical 8-bit microcontroller used in Arduino platforms and low-power WSN sensor nodes.
+
+\paragraph{Target Platform Specifications}
+
+\begin{table}[htbp]
+\centering
+\caption{ATmega328P Platform Specifications}
+\label{tab:atmega328p_specs}
+\begin{tabular}{ll}
+\hline
+\textbf{Parameter} & \textbf{Value} \\
+\hline
+Architecture & 8-bit AVR RISC \\
+Clock Frequency & 16 MHz \\
+Flash Memory & 32 KB \\
+SRAM & 2 KB \\
+EEPROM & 1 KB \\
+Active Current & 12 mA @ 5V \\
+Sleep Current & 0.3 mA (Power-down) \\
+Typical Application & Arduino Uno, WSN motes \\
+\hline
+\end{tabular}
+\end{table}
+
+\paragraph{INT8 Quantization Methodology}
+
+The quantization process converts floating-point model parameters to 8-bit integers using min-max scaling:
+
+\begin{equation}
+    q = \text{round}\left(\frac{x - x_{min}}{x_{max} - x_{min}} \times 255\right)
+\end{equation}
+
+Each tree node is encoded in 6 bytes:
+\begin{itemize}
+    \item \texttt{feature\_idx} (1 byte): Index of the feature to compare, or 255 for leaf nodes
+    \item \texttt{threshold} (1 byte): Quantized comparison threshold (or class ID for leaves)
+    \item \texttt{left\_child} (2 bytes): Index of left child node
+    \item \texttt{right\_child} (2 bytes): Index of right child node
+\end{itemize}
+
+To meet the 32KB flash constraint, tree depth is limited to 6 levels (maximum 63 nodes per tree), providing a balance between model complexity and memory footprint.
+
+\paragraph{Memory Utilization}
+
+\begin{table}[htbp]
+\centering
+\caption{AVR Memory Utilization by Model}
+\label{tab:avr_memory}
+\begin{tabular}{lcccc}
+\hline
+\textbf{Model} & \textbf{Trees} & \textbf{Flash (bytes)} & \textbf{Flash (\%)} & \textbf{RAM (\%)} \\
+\hline
+Extra Trees & 5 & 7,236 & 22.1\% & 35.6\% \\
+Random Forest & 5 & 7,238 & 22.1\% & 35.7\% \\
+Gradient Boosting & 20 & 9,730 & 29.7\% & 35.9\% \\
+HistGradient Boosting & 20 & 6,398 & 19.5\% & 36.1\% \\
+\hline
+\end{tabular}
+\end{table}
+
+All models fit comfortably within the ATmega328P's 32KB flash memory, utilizing 20--30\% of available program space. This leaves substantial room for application code, network stack, and sensor drivers.
+
+\paragraph{Inference Cycle Count Analysis}
+
+The inference latency is decomposed into three components:
+
+\begin{enumerate}
+    \item \textbf{Feature Quantization}: Converting 16 floating-point features to UINT8 values
+    \item \textbf{Tree Traversal}: Navigating decision trees from root to leaf nodes
+    \item \textbf{Ensemble Voting}: Aggregating predictions from all trees
+\end{enumerate}
+
+\begin{table}[htbp]
+\centering
+\caption{Cycle Count Breakdown by Component}
+\label{tab:avr_cycles}
+\begin{tabular}{lcccc}
+\hline
+\textbf{Component} & \textbf{Extra Trees} & \textbf{Random Forest} & \textbf{Gradient} & \textbf{HistGradient} \\
+\hline
+Feature Quantization & 500 & 500 & 500 & 500 \\
+Tree Traversal & 600 & 600 & 2,400 & 2,400 \\
+Ensemble Overhead & 89 & 89 & 239 & 239 \\
+\textbf{Total Cycles} & \textbf{1,189} & \textbf{1,189} & \textbf{3,139} & \textbf{3,139} \\
+\hline
+\end{tabular}
+\end{table}
+
+\paragraph{Timing Results at 16 MHz}
+
+\begin{table}[htbp]
+\centering
+\caption{AVR Inference Latency Results}
+\label{tab:avr_latency}
+\begin{tabular}{lccc}
+\hline
+\textbf{Model} & \textbf{Latency ($\mu$s)} & \textbf{Latency (ms)} & \textbf{Throughput (inf/s)} \\
+\hline
+Extra Trees & 74.3 & 0.074 & 13,457 \\
+Random Forest & 74.3 & 0.074 & 13,457 \\
+Gradient Boosting & 196.2 & 0.196 & 5,097 \\
+HistGradient Boosting & 196.2 & 0.196 & 5,097 \\
+\hline
+\end{tabular}
+\end{table}
+
+\paragraph{Analysis and Discussion}
+
+The AVR simulation results demonstrate that all evaluated models achieve inference latencies well below 1 millisecond:
+
+\begin{itemize}
+    \item \textbf{Extra Trees and Random Forest} (5 trees): 74.3 $\mu$s per inference, enabling 13,457 inferences per second. At typical WSN packet rates of 10--100 Hz, these models can perform real-time per-packet intrusion detection with less than 0.1\% CPU utilization.
+    
+    \item \textbf{Gradient Boosting and HistGradient Boosting} (20 trees): 196.2 $\mu$s per inference, still achieving 5,097 inferences per second. The 4$\times$ higher tree count is reflected in the 4$\times$ longer tree traversal time, though the ensemble overhead only increases by a factor of 2.7$\times$.
+\end{itemize}
+
+\paragraph{Energy Consumption Estimation}
+
+Based on the ATmega328P's active current consumption of 12 mA at 5V and 16 MHz:
+
+\begin{equation}
+    E_{inference} = I_{active} \times V_{supply} \times t_{inference}
+\end{equation}
+
+\begin{table}[htbp]
+\centering
+\caption{Energy per Inference on ATmega328P}
+\label{tab:avr_energy}
+\begin{tabular}{lcc}
+\hline
+\textbf{Model} & \textbf{Time ($\mu$s)} & \textbf{Energy ($\mu$J)} \\
+\hline
+Extra Trees & 74.3 & 4.5 \\
+Random Forest & 74.3 & 4.5 \\
+Gradient Boosting & 196.2 & 11.8 \\
+HistGradient Boosting & 196.2 & 11.8 \\
+\hline
+\end{tabular}
+\end{table}
+
+For context, a typical WSN radio transmission (CC2420) consumes approximately 1,000 $\mu$J per packet~\cite{polastre2005versatile}. The IDS inference energy represents less than 1\% of radio transmission energy, making it negligible in the overall energy budget.
+
+\paragraph{Comparison with Analytical Estimates}
+
+Comparing the AVR cycle-accurate simulation with the analytical estimates from Section~\ref{sec:analytical}:
+
+\begin{table}[htbp]
+\centering
+\caption{Comparison of Estimation Methods}
+\label{tab:estimation_comparison}
+\begin{tabular}{lccc}
+\hline
+\textbf{Model} & \textbf{Analytical (MSP430)} & \textbf{AVR Simulation} & \textbf{Ratio} \\
+\hline
+Random Forest & 8.23 ms & 0.074 ms & 111$\times$ \\
+Extra Trees & 9.20 ms & 0.074 ms & 124$\times$ \\
+Gradient Boosting & 3.13 ms & 0.196 ms & 16$\times$ \\
+\hline
+\end{tabular}
+\end{table}
+
+The AVR simulation yields significantly faster latencies than the analytical estimates for several reasons:
+
+\begin{enumerate}
+    \item The analytical model uses full-precision floating-point operations, while the AVR implementation uses INT8 quantization with fixed-point arithmetic.
+    \item The analytical model counts operations based on the full sklearn model complexity, while the AVR implementation uses depth-limited trees (max depth 6).
+    \item The AVR compiler optimizations (avr-gcc -Os) generate highly efficient code paths for the tree traversal loop.
+\end{enumerate}
+
+\paragraph{Implications for WSN Deployment}
+
+These results strongly support the feasibility of deploying tree-based IDS models on 8-bit microcontrollers commonly used in WSN applications:
+
+\begin{enumerate}
+    \item \textbf{Real-time Capability}: Sub-millisecond inference enables per-packet inspection at rates exceeding typical WSN traffic patterns by two orders of magnitude.
+    
+    \item \textbf{Memory Efficiency}: INT8 quantization and depth-limited trees reduce memory footprint to 20--30\% of available flash, leaving ample space for application code.
+    
+    \item \textbf{Energy Efficiency}: Inference energy consumption (4.5--11.8 $\mu$J) is negligible compared to radio transmission and sensor sampling operations.
+    
+    \item \textbf{No Oversampling Benefit}: Given that models without oversampling achieve 99\%+ accuracy (as shown in Section~\ref{sec:classification_results}), the additional complexity of oversampling provides no benefit while increasing training time.
+\end{enumerate}

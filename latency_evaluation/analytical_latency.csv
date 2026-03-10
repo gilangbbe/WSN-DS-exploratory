@@ -1,0 +1,49 @@
+model,model_name,sampling_strategy,device,device_key,comparisons,additions,multiplications,total_cycles,estimated_latency_ms
+Gradient_Boosting_Conservative_SMOTE,Gradient_Boosting,Conservative_SMOTE,MSP430F5529 (Low-end MCU),MSP430,5056,500,0,21224,0.8489599999999999
+Gradient_Boosting_Conservative_SMOTE,Gradient_Boosting,Conservative_SMOTE,ARM Cortex-M4 (Mid-range MCU),CortexM4,5056,500,0,5556,0.03307142857142857
+Random_Forest_Conservative_SMOTE,Random_Forest,Conservative_SMOTE,MSP430F5529 (Low-end MCU),MSP430,1218,100,0,5072,0.20288
+Random_Forest_Conservative_SMOTE,Random_Forest,Conservative_SMOTE,ARM Cortex-M4 (Mid-range MCU),CortexM4,1218,100,0,1318,0.007845238095238096
+Gradient_Boosting_SMOTE_ENN,Gradient_Boosting,SMOTE_ENN,MSP430F5529 (Low-end MCU),MSP430,5199,500,0,21796,0.8718400000000001
+Gradient_Boosting_SMOTE_ENN,Gradient_Boosting,SMOTE_ENN,ARM Cortex-M4 (Mid-range MCU),CortexM4,5199,500,0,5699,0.03392261904761904
+Gradient_Boosting_BorderlineSMOTE,Gradient_Boosting,BorderlineSMOTE,MSP430F5529 (Low-end MCU),MSP430,5104,500,0,21416,0.85664
+Gradient_Boosting_BorderlineSMOTE,Gradient_Boosting,BorderlineSMOTE,ARM Cortex-M4 (Mid-range MCU),CortexM4,5104,500,0,5604,0.033357142857142856
+Random_Forest_BorderlineSMOTE,Random_Forest,BorderlineSMOTE,MSP430F5529 (Low-end MCU),MSP430,1231,100,0,5124,0.20495999999999998
+Random_Forest_BorderlineSMOTE,Random_Forest,BorderlineSMOTE,ARM Cortex-M4 (Mid-range MCU),CortexM4,1231,100,0,1331,0.007922619047619048
+Neural_Network_Conservative_SMOTE,Neural_Network,Conservative_SMOTE,MSP430F5529 (Low-end MCU),MSP430,0,6850,6850,68500,2.7399999999999998
+Neural_Network_Conservative_SMOTE,Neural_Network,Conservative_SMOTE,ARM Cortex-M4 (Mid-range MCU),CortexM4,0,6850,6850,13700,0.08154761904761905
+Gradient_Boosting_ADASYN,Gradient_Boosting,ADASYN,MSP430F5529 (Low-end MCU),MSP430,5241,500,0,21964,0.87856
+Gradient_Boosting_ADASYN,Gradient_Boosting,ADASYN,ARM Cortex-M4 (Mid-range MCU),CortexM4,5241,500,0,5741,0.03417261904761904
+Random_Forest_SMOTE_ENN,Random_Forest,SMOTE_ENN,MSP430F5529 (Low-end MCU),MSP430,1229,100,0,5116,0.20464
+Random_Forest_SMOTE_ENN,Random_Forest,SMOTE_ENN,ARM Cortex-M4 (Mid-range MCU),CortexM4,1229,100,0,1329,0.007910714285714287
+HistGradient_Boosting_SMOTE_ENN,HistGradient_Boosting,SMOTE_ENN,MSP430F5529 (Low-end MCU),MSP430,3100,310,0,13020,0.5207999999999999
+HistGradient_Boosting_SMOTE_ENN,HistGradient_Boosting,SMOTE_ENN,ARM Cortex-M4 (Mid-range MCU),CortexM4,3100,310,0,3410,0.020297619047619047
+HistGradient_Boosting_Conservative_SMOTE,HistGradient_Boosting,Conservative_SMOTE,MSP430F5529 (Low-end MCU),MSP430,3300,330,0,13860,0.5544
+HistGradient_Boosting_Conservative_SMOTE,HistGradient_Boosting,Conservative_SMOTE,ARM Cortex-M4 (Mid-range MCU),CortexM4,3300,330,0,3630,0.02160714285714286
+HistGradient_Boosting_BorderlineSMOTE,HistGradient_Boosting,BorderlineSMOTE,MSP430F5529 (Low-end MCU),MSP430,3500,350,0,14700,0.588
+HistGradient_Boosting_BorderlineSMOTE,HistGradient_Boosting,BorderlineSMOTE,ARM Cortex-M4 (Mid-range MCU),CortexM4,3500,350,0,3850,0.02291666666666667
+Extra_Trees_Conservative_SMOTE,Extra_Trees,Conservative_SMOTE,MSP430F5529 (Low-end MCU),MSP430,1267,100,0,5268,0.21072
+Extra_Trees_Conservative_SMOTE,Extra_Trees,Conservative_SMOTE,ARM Cortex-M4 (Mid-range MCU),CortexM4,1267,100,0,1367,0.008136904761904762
+Extra_Trees_SMOTE_ENN,Extra_Trees,SMOTE_ENN,MSP430F5529 (Low-end MCU),MSP430,1270,100,0,5280,0.2112
+Extra_Trees_SMOTE_ENN,Extra_Trees,SMOTE_ENN,ARM Cortex-M4 (Mid-range MCU),CortexM4,1270,100,0,1370,0.008154761904761906
+Neural_Network_BorderlineSMOTE,Neural_Network,BorderlineSMOTE,MSP430F5529 (Low-end MCU),MSP430,0,6850,6850,68500,2.7399999999999998
+Neural_Network_BorderlineSMOTE,Neural_Network,BorderlineSMOTE,ARM Cortex-M4 (Mid-range MCU),CortexM4,0,6850,6850,13700,0.08154761904761905
+Random_Forest_ADASYN,Random_Forest,ADASYN,MSP430F5529 (Low-end MCU),MSP430,1279,100,0,5316,0.21264
+Random_Forest_ADASYN,Random_Forest,ADASYN,ARM Cortex-M4 (Mid-range MCU),CortexM4,1279,100,0,1379,0.008208333333333335
+HistGradient_Boosting_ADASYN,HistGradient_Boosting,ADASYN,MSP430F5529 (Low-end MCU),MSP430,4050,405,0,17010,0.6804
+HistGradient_Boosting_ADASYN,HistGradient_Boosting,ADASYN,ARM Cortex-M4 (Mid-range MCU),CortexM4,4050,405,0,4455,0.02651785714285714
+Extra_Trees_BorderlineSMOTE,Extra_Trees,BorderlineSMOTE,MSP430F5529 (Low-end MCU),MSP430,1272,100,0,5288,0.21152
+Extra_Trees_BorderlineSMOTE,Extra_Trees,BorderlineSMOTE,ARM Cortex-M4 (Mid-range MCU),CortexM4,1272,100,0,1372,0.008166666666666666
+Neural_Network_SMOTE_ENN,Neural_Network,SMOTE_ENN,MSP430F5529 (Low-end MCU),MSP430,0,6850,6850,68500,2.7399999999999998
+Neural_Network_SMOTE_ENN,Neural_Network,SMOTE_ENN,ARM Cortex-M4 (Mid-range MCU),CortexM4,0,6850,6850,13700,0.08154761904761905
+Logistic_Regression_SMOTE_ENN,Logistic_Regression,SMOTE_ENN,MSP430F5529 (Low-end MCU),MSP430,0,80,80,900,0.036000000000000004
+Logistic_Regression_SMOTE_ENN,Logistic_Regression,SMOTE_ENN,ARM Cortex-M4 (Mid-range MCU),CortexM4,0,80,80,220,0.0013095238095238097
+Neural_Network_ADASYN,Neural_Network,ADASYN,MSP430F5529 (Low-end MCU),MSP430,0,6850,6850,68500,2.7399999999999998
+Neural_Network_ADASYN,Neural_Network,ADASYN,ARM Cortex-M4 (Mid-range MCU),CortexM4,0,6850,6850,13700,0.08154761904761905
+Logistic_Regression_Conservative_SMOTE,Logistic_Regression,Conservative_SMOTE,MSP430F5529 (Low-end MCU),MSP430,0,80,80,900,0.036000000000000004
+Logistic_Regression_Conservative_SMOTE,Logistic_Regression,Conservative_SMOTE,ARM Cortex-M4 (Mid-range MCU),CortexM4,0,80,80,220,0.0013095238095238097
+Logistic_Regression_BorderlineSMOTE,Logistic_Regression,BorderlineSMOTE,MSP430F5529 (Low-end MCU),MSP430,0,80,80,900,0.036000000000000004
+Logistic_Regression_BorderlineSMOTE,Logistic_Regression,BorderlineSMOTE,ARM Cortex-M4 (Mid-range MCU),CortexM4,0,80,80,220,0.0013095238095238097
+Extra_Trees_ADASYN,Extra_Trees,ADASYN,MSP430F5529 (Low-end MCU),MSP430,1312,100,0,5448,0.21792
+Extra_Trees_ADASYN,Extra_Trees,ADASYN,ARM Cortex-M4 (Mid-range MCU),CortexM4,1312,100,0,1412,0.008404761904761904
+Logistic_Regression_ADASYN,Logistic_Regression,ADASYN,MSP430F5529 (Low-end MCU),MSP430,0,80,80,900,0.036000000000000004
+Logistic_Regression_ADASYN,Logistic_Regression,ADASYN,ARM Cortex-M4 (Mid-range MCU),CortexM4,0,80,80,220,0.0013095238095238097

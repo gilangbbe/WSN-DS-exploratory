@@ -1,0 +1,182 @@
+[
+  {
+    "model_name": "extra_trees_no_oversampling",
+    "tree_analysis": {
+      "max_depth": 6,
+      "avg_path_length": 4,
+      "cycles_per_node": 25,
+      "call_overhead": 20,
+      "total_per_tree": 120,
+      "lpm_instructions": 0
+    },
+    "ensemble_analysis": {
+      "n_trees": 5,
+      "n_classes": 5,
+      "voting_overhead": {
+        "init_votes": 10,
+        "per_tree_overhead": 10,
+        "find_max": 25,
+        "return": 4
+      },
+      "total_overhead": 89
+    },
+    "quantize_analysis": {
+      "n_features": 16,
+      "cycles_per_feature": 25,
+      "total": 500
+    },
+    "cycle_breakdown": {
+      "quantization": 500,
+      "tree_traversal": 600,
+      "ensemble_overhead": 89,
+      "total": 1189
+    },
+    "timing": {
+      "frequency_mhz": 16,
+      "time_us": 74.31,
+      "time_ms": 0.0743,
+      "throughput_per_sec": 13456.7
+    },
+    "memory": {
+      "flash_bytes": 7236,
+      "flash_pct": 22.1,
+      "ram_bytes": 730,
+      "ram_pct": 35.6
+    }
+  },
+  {
+    "model_name": "random_forest_no_oversampling",
+    "tree_analysis": {
+      "max_depth": 6,
+      "avg_path_length": 4,
+      "cycles_per_node": 25,
+      "call_overhead": 20,
+      "total_per_tree": 120,
+      "lpm_instructions": 0
+    },
+    "ensemble_analysis": {
+      "n_trees": 5,
+      "n_classes": 5,
+      "voting_overhead": {
+        "init_votes": 10,
+        "per_tree_overhead": 10,
+        "find_max": 25,
+        "return": 4
+      },
+      "total_overhead": 89
+    },
+    "quantize_analysis": {
+      "n_features": 16,
+      "cycles_per_feature": 25,
+      "total": 500
+    },
+    "cycle_breakdown": {
+      "quantization": 500,
+      "tree_traversal": 600,
+      "ensemble_overhead": 89,
+      "total": 1189
+    },
+    "timing": {
+      "frequency_mhz": 16,
+      "time_us": 74.31,
+      "time_ms": 0.0743,
+      "throughput_per_sec": 13456.7
+    },
+    "memory": {
+      "flash_bytes": 7238,
+      "flash_pct": 22.1,
+      "ram_bytes": 732,
+      "ram_pct": 35.7
+    }
+  },
+  {
+    "model_name": "gradient_boosting_no_oversampling",
+    "tree_analysis": {
+      "max_depth": 6,
+      "avg_path_length": 4,
+      "cycles_per_node": 25,
+      "call_overhead": 20,
+      "total_per_tree": 120,
+      "lpm_instructions": 0
+    },
+    "ensemble_analysis": {
+      "n_trees": 20,
+      "n_classes": 5,
+      "voting_overhead": {
+        "init_votes": 10,
+        "per_tree_overhead": 10,
+        "find_max": 25,
+        "return": 4
+      },
+      "total_overhead": 239
+    },
+    "quantize_analysis": {
+      "n_features": 16,
+      "cycles_per_feature": 25,
+      "total": 500
+    },
+    "cycle_breakdown": {
+      "quantization": 500,
+      "tree_traversal": 2400,
+      "ensemble_overhead": 239,
+      "total": 3139
+    },
+    "timing": {
+      "frequency_mhz": 16,
+      "time_us": 196.19,
+      "time_ms": 0.1962,
+      "throughput_per_sec": 5097.2
+    },
+    "memory": {
+      "flash_bytes": 9730,
+      "flash_pct": 29.7,
+      "ram_bytes": 736,
+      "ram_pct": 35.9
+    }
+  },
+  {
+    "model_name": "histgradient_boosting_no_oversampling",
+    "tree_analysis": {
+      "max_depth": 6,
+      "avg_path_length": 4,
+      "cycles_per_node": 25,
+      "call_overhead": 20,
+      "total_per_tree": 120,
+      "lpm_instructions": 0
+    },
+    "ensemble_analysis": {
+      "n_trees": 20,
+      "n_classes": 5,
+      "voting_overhead": {
+        "init_votes": 10,
+        "per_tree_overhead": 10,
+        "find_max": 25,
+        "return": 4
+      },
+      "total_overhead": 239
+    },
+    "quantize_analysis": {
+      "n_features": 16,
+      "cycles_per_feature": 25,
+      "total": 500
+    },
+    "cycle_breakdown": {
+      "quantization": 500,
+      "tree_traversal": 2400,
+      "ensemble_overhead": 239,
+      "total": 3139
+    },
+    "timing": {
+      "frequency_mhz": 16,
+      "time_us": 196.19,
+      "time_ms": 0.1962,
+      "throughput_per_sec": 5097.2
+    },
+    "memory": {
+      "flash_bytes": 6398,
+      "flash_pct": 19.5,
+      "ram_bytes": 740,
+      "ram_pct": 36.1
+    }
+  }
+]

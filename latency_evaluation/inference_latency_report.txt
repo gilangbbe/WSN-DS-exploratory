@@ -1,0 +1,482 @@
+================================================================================
+INFERENCE LATENCY EVALUATION IN LEACH-BASED WSN IDS
+================================================================================
+
+Report Generated: 2026-01-30 18:34:31
+
+
+--------------------------------------------------------------------------------
+1. INFERENCE DEPLOYMENT ASSUMPTIONS
+--------------------------------------------------------------------------------
+
+Inference Location: Cluster Head (CH)
+
+Justification:
+    The Cluster Head is selected as the optimal inference deployment location based on:
+    
+    1. FEATURE AVAILABILITY:
+       - CH aggregates data from all member nodes in the cluster
+       - MAC-layer features (ADV_S, ADV_R, JOIN_S, JOIN_R, SCH_S, SCH_R, DATA_S, DATA_R)
+         are directly observable at the CH level
+       - CH has visibility into cluster-wide communication patterns
+    
+    2. LEACH COMMUNICATION PATTERN:
+       - In LEACH, CHs receive all data from member nodes before forwarding to BS
+       - This natural aggregation point allows inspection of all cluster traffic
+       - Detection at CH prevents malicious data from reaching the Base Station
+    
+    3. ENERGY AND COMPUTATION CONSTRAINTS:
+       - CHs have higher energy budget than regular sensor nodes
+       - CH role rotates, distributing computational load across network
+       - More practical than sensor node deployment (too resource-constrained)
+       - More responsive than BS deployment (closer to attack source)
+    
+
+System Assumptions:
+  1. Features are pre-extracted from MAC-layer packets
+  2. Inference runs after feature extraction, before data forwarding
+  3. Single-threaded execution on embedded processor
+  4. No operating system overhead (bare-metal or RTOS)
+  5. Memory for model and feature buffer is pre-allocated
+  6. Inference is triggered per received packet or per LEACH round
+
+--------------------------------------------------------------------------------
+2. TARGET DEVICE PROFILES
+--------------------------------------------------------------------------------
+
+MSP430F5529 (Low-end MCU)
+  Description: Texas Instruments MSP430 - Ultra-low power 16-bit MCU
+  Clock Frequency: 25 MHz
+  RAM: 8 KB
+  Flash: 128 KB
+  Active Power: 3.6 mW
+
+ARM Cortex-M4 (Mid-range MCU)
+  Description: ARM Cortex-M4F with FPU - e.g., STM32F4 series
+  Clock Frequency: 168 MHz
+  RAM: 192 KB
+  Flash: 1024 KB
+  Active Power: 80 mW
+
+--------------------------------------------------------------------------------
+3. INFERENCE EXECUTION MODEL
+--------------------------------------------------------------------------------
+
+    Inference Execution Model:
+    - Granularity: Per-packet inspection
+    - Batch size: 1 (single sample inference)
+    - Trigger: After feature extraction from each received packet
+    - Features: Pre-extracted, stored in fixed-size buffer (16 features × 4 bytes = 64 bytes)
+    
+
+LEACH Round Duration: 20 seconds
+Estimated Packets per Round: 100
+Worst-case Inference Frequency: 10 Hz
+
+--------------------------------------------------------------------------------
+4. EMPIRICAL INFERENCE LATENCY MEASUREMENTS
+--------------------------------------------------------------------------------
+
+Measurement Conditions:
+  - CPU-only execution (no GPU)
+  - Single-threaded execution
+  - Batch size = 1
+  - Iterations per model: 10000
+
+Table 1: Empirical Inference Latency (Host Machine)
+----------------------------------------------------------------------------------------------------
+Model                                    Mean (ms)    P95 (ms)     Max (ms)    
+----------------------------------------------------------------------------------------------------
+Logistic_Regression_Conservative_SMOTE   0.0333       0.0345       0.1341      
+Logistic_Regression_SMOTE_ENN            0.0335       0.0349       0.0892      
+Logistic_Regression_ADASYN               0.0336       0.0402       0.0940      
+Logistic_Regression_BorderlineSMOTE      0.0336       0.0343       0.0724      
+Neural_Network_SMOTE_ENN                 0.0586       0.0669       0.1765      
+Neural_Network_ADASYN                    0.0624       0.0688       0.2473      
+Neural_Network_Conservative_SMOTE        0.0635       0.0663       2.7916      
+Neural_Network_BorderlineSMOTE           0.0641       0.0684       0.3142      
+Gradient_Boosting_Conservative_SMOTE     0.3166       0.3545       2.3277      
+Gradient_Boosting_BorderlineSMOTE        0.3211       0.3433       1.4148      
+Gradient_Boosting_ADASYN                 0.3225       0.3478       2.1513      
+Gradient_Boosting_SMOTE_ENN              0.3299       0.3648       1.2578      
+HistGradient_Boosting_SMOTE_ENN          10.6385      17.2433      84.4730     
+HistGradient_Boosting_Conservative_SMOTE 10.9175      20.0173      66.6077     
+HistGradient_Boosting_BorderlineSMOTE    11.7935      19.3421      76.7144     
+HistGradient_Boosting_ADASYN             13.0911      22.6326      77.7385     
+Extra_Trees_Conservative_SMOTE           13.8941      14.4082      42.6857     
+Extra_Trees_BorderlineSMOTE              13.9580      14.4135      35.7257     
+Extra_Trees_SMOTE_ENN                    13.9608      14.4594      38.2167     
+Random_Forest_BorderlineSMOTE            13.9670      14.3584      36.5268     
+Random_Forest_SMOTE_ENN                  13.9681      14.4260      38.8823     
+Random_Forest_ADASYN                     13.9744      14.4809      38.6373     
+Extra_Trees_ADASYN                       13.9875      14.4633      37.6601     
+Random_Forest_Conservative_SMOTE         13.9975      14.6051      37.6506     
+----------------------------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+5. ANALYTICAL INFERENCE LATENCY ESTIMATION
+--------------------------------------------------------------------------------
+
+Table 2: Operation Counts per Model
+------------------------------------------------------------------------------------------
+Model                                    Comparisons     Additions       Multiplications
+------------------------------------------------------------------------------------------
+Gradient_Boosting_Conservative_SMOTE     5056            500             0              
+Random_Forest_Conservative_SMOTE         1218            100             0              
+Gradient_Boosting_SMOTE_ENN              5199            500             0              
+Gradient_Boosting_BorderlineSMOTE        5104            500             0              
+Random_Forest_BorderlineSMOTE            1231            100             0              
+Neural_Network_Conservative_SMOTE        0               6850            6850           
+Gradient_Boosting_ADASYN                 5241            500             0              
+Random_Forest_SMOTE_ENN                  1229            100             0              
+HistGradient_Boosting_SMOTE_ENN          3100            310             0              
+HistGradient_Boosting_Conservative_SMOTE 3300            330             0              
+HistGradient_Boosting_BorderlineSMOTE    3500            350             0              
+Extra_Trees_Conservative_SMOTE           1267            100             0              
+Extra_Trees_SMOTE_ENN                    1270            100             0              
+Neural_Network_BorderlineSMOTE           0               6850            6850           
+Random_Forest_ADASYN                     1279            100             0              
+HistGradient_Boosting_ADASYN             4050            405             0              
+Extra_Trees_BorderlineSMOTE              1272            100             0              
+Neural_Network_SMOTE_ENN                 0               6850            6850           
+Logistic_Regression_SMOTE_ENN            0               80              80             
+Neural_Network_ADASYN                    0               6850            6850           
+Logistic_Regression_Conservative_SMOTE   0               80              80             
+Logistic_Regression_BorderlineSMOTE      0               80              80             
+Extra_Trees_ADASYN                       1312            100             0              
+Logistic_Regression_ADASYN               0               80              80             
+------------------------------------------------------------------------------------------
+
+Table 3: Estimated Inference Latency by Device
+----------------------------------------------------------------------------------------------------
+Model                               Device                    Est. Latency (ms)   
+----------------------------------------------------------------------------------------------------
+Extra_Trees_ADASYN                  ARM Cortex-M4 (Mid-range MCU) 0.008405            
+Extra_Trees_ADASYN                  MSP430F5529 (Low-end MCU) 0.217920            
+Extra_Trees_BorderlineSMOTE         ARM Cortex-M4 (Mid-range MCU) 0.008167            
+Extra_Trees_BorderlineSMOTE         MSP430F5529 (Low-end MCU) 0.211520            
+Extra_Trees_Conservative_SMOTE      ARM Cortex-M4 (Mid-range MCU) 0.008137            
+Extra_Trees_Conservative_SMOTE      MSP430F5529 (Low-end MCU) 0.210720            
+Extra_Trees_SMOTE_ENN               ARM Cortex-M4 (Mid-range MCU) 0.008155            
+Extra_Trees_SMOTE_ENN               MSP430F5529 (Low-end MCU) 0.211200            
+Gradient_Boosting_ADASYN            ARM Cortex-M4 (Mid-range MCU) 0.034173            
+Gradient_Boosting_ADASYN            MSP430F5529 (Low-end MCU) 0.878560            
+Gradient_Boosting_BorderlineSMOTE   ARM Cortex-M4 (Mid-range MCU) 0.033357            
+Gradient_Boosting_BorderlineSMOTE   MSP430F5529 (Low-end MCU) 0.856640            
+Gradient_Boosting_Conservative_SMOTE ARM Cortex-M4 (Mid-range MCU) 0.033071            
+Gradient_Boosting_Conservative_SMOTE MSP430F5529 (Low-end MCU) 0.848960            
+Gradient_Boosting_SMOTE_ENN         ARM Cortex-M4 (Mid-range MCU) 0.033923            
+Gradient_Boosting_SMOTE_ENN         MSP430F5529 (Low-end MCU) 0.871840            
+HistGradient_Boosting_ADASYN        ARM Cortex-M4 (Mid-range MCU) 0.026518            
+HistGradient_Boosting_ADASYN        MSP430F5529 (Low-end MCU) 0.680400            
+HistGradient_Boosting_BorderlineSMOTE ARM Cortex-M4 (Mid-range MCU) 0.022917            
+HistGradient_Boosting_BorderlineSMOTE MSP430F5529 (Low-end MCU) 0.588000            
+HistGradient_Boosting_Conservative_SMOTE ARM Cortex-M4 (Mid-range MCU) 0.021607            
+HistGradient_Boosting_Conservative_SMOTE MSP430F5529 (Low-end MCU) 0.554400            
+HistGradient_Boosting_SMOTE_ENN     ARM Cortex-M4 (Mid-range MCU) 0.020298            
+HistGradient_Boosting_SMOTE_ENN     MSP430F5529 (Low-end MCU) 0.520800            
+Logistic_Regression_ADASYN          ARM Cortex-M4 (Mid-range MCU) 0.001310            
+Logistic_Regression_ADASYN          MSP430F5529 (Low-end MCU) 0.036000            
+Logistic_Regression_BorderlineSMOTE ARM Cortex-M4 (Mid-range MCU) 0.001310            
+Logistic_Regression_BorderlineSMOTE MSP430F5529 (Low-end MCU) 0.036000            
+Logistic_Regression_Conservative_SMOTE ARM Cortex-M4 (Mid-range MCU) 0.001310            
+Logistic_Regression_Conservative_SMOTE MSP430F5529 (Low-end MCU) 0.036000            
+Logistic_Regression_SMOTE_ENN       ARM Cortex-M4 (Mid-range MCU) 0.001310            
+Logistic_Regression_SMOTE_ENN       MSP430F5529 (Low-end MCU) 0.036000            
+Neural_Network_ADASYN               ARM Cortex-M4 (Mid-range MCU) 0.081548            
+Neural_Network_ADASYN               MSP430F5529 (Low-end MCU) 2.740000            
+Neural_Network_BorderlineSMOTE      ARM Cortex-M4 (Mid-range MCU) 0.081548            
+Neural_Network_BorderlineSMOTE      MSP430F5529 (Low-end MCU) 2.740000            
+Neural_Network_Conservative_SMOTE   ARM Cortex-M4 (Mid-range MCU) 0.081548            
+Neural_Network_Conservative_SMOTE   MSP430F5529 (Low-end MCU) 2.740000            
+Neural_Network_SMOTE_ENN            ARM Cortex-M4 (Mid-range MCU) 0.081548            
+Neural_Network_SMOTE_ENN            MSP430F5529 (Low-end MCU) 2.740000            
+Random_Forest_ADASYN                ARM Cortex-M4 (Mid-range MCU) 0.008208            
+Random_Forest_ADASYN                MSP430F5529 (Low-end MCU) 0.212640            
+Random_Forest_BorderlineSMOTE       ARM Cortex-M4 (Mid-range MCU) 0.007923            
+Random_Forest_BorderlineSMOTE       MSP430F5529 (Low-end MCU) 0.204960            
+Random_Forest_Conservative_SMOTE    ARM Cortex-M4 (Mid-range MCU) 0.007845            
+Random_Forest_Conservative_SMOTE    MSP430F5529 (Low-end MCU) 0.202880            
+Random_Forest_SMOTE_ENN             ARM Cortex-M4 (Mid-range MCU) 0.007911            
+Random_Forest_SMOTE_ENN             MSP430F5529 (Low-end MCU) 0.204640            
+----------------------------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+6. ENERGY-AWARE LATENCY ANALYSIS
+--------------------------------------------------------------------------------
+
+Table 4: Energy Cost per Inference
+--------------------------------------------------------------------------------------------------------------
+Model                               Device               Latency (ms)    Energy (mJ)     E/Round (mJ)   
+--------------------------------------------------------------------------------------------------------------
+Extra_Trees_ADASYN                  CortexM4             0.008405        1.998214        199.8214       
+Extra_Trees_ADASYN                  MSP430               0.217920        0.604260        60.4260        
+Extra_Trees_BorderlineSMOTE         CortexM4             0.008167        1.993999        199.3999       
+Extra_Trees_BorderlineSMOTE         MSP430               0.211520        0.602985        60.2985        
+Extra_Trees_Conservative_SMOTE      CortexM4             0.008137        1.984876        198.4876       
+Extra_Trees_Conservative_SMOTE      MSP430               0.210720        0.600227        60.0227        
+Extra_Trees_SMOTE_ENN               CortexM4             0.008155        1.994407        199.4407       
+Extra_Trees_SMOTE_ENN               MSP430               0.211200        0.603109        60.3109        
+Gradient_Boosting_ADASYN            CortexM4             0.034173        0.046075        4.6075         
+Gradient_Boosting_ADASYN            MSP430               0.878560        0.013933        1.3933         
+Gradient_Boosting_BorderlineSMOTE   CortexM4             0.033357        0.045876        4.5876         
+Gradient_Boosting_BorderlineSMOTE   MSP430               0.856640        0.013873        1.3873         
+Gradient_Boosting_Conservative_SMOTE CortexM4             0.033071        0.045231        4.5231         
+Gradient_Boosting_Conservative_SMOTE MSP430               0.848960        0.013678        1.3678         
+Gradient_Boosting_SMOTE_ENN         CortexM4             0.033923        0.047124        4.7124         
+Gradient_Boosting_SMOTE_ENN         MSP430               0.871840        0.014250        1.4250         
+HistGradient_Boosting_ADASYN        CortexM4             0.026518        1.870151        187.0151       
+HistGradient_Boosting_ADASYN        MSP430               0.680400        0.565534        56.5534        
+HistGradient_Boosting_BorderlineSMOTE CortexM4             0.022917        1.684780        168.4780       
+HistGradient_Boosting_BorderlineSMOTE MSP430               0.588000        0.509477        50.9477        
+HistGradient_Boosting_Conservative_SMOTE CortexM4             0.021607        1.559637        155.9637       
+HistGradient_Boosting_Conservative_SMOTE MSP430               0.554400        0.471634        47.1634        
+HistGradient_Boosting_SMOTE_ENN     CortexM4             0.020298        1.519789        151.9789       
+HistGradient_Boosting_SMOTE_ENN     MSP430               0.520800        0.459584        45.9584        
+Logistic_Regression_ADASYN          CortexM4             0.001310        0.004794        0.4794         
+Logistic_Regression_ADASYN          MSP430               0.036000        0.001450        0.1450         
+Logistic_Regression_BorderlineSMOTE CortexM4             0.001310        0.004799        0.4799         
+Logistic_Regression_BorderlineSMOTE MSP430               0.036000        0.001451        0.1451         
+Logistic_Regression_Conservative_SMOTE CortexM4             0.001310        0.004756        0.4756         
+Logistic_Regression_Conservative_SMOTE MSP430               0.036000        0.001438        0.1438         
+Logistic_Regression_SMOTE_ENN       CortexM4             0.001310        0.004791        0.4791         
+Logistic_Regression_SMOTE_ENN       MSP430               0.036000        0.001449        0.1449         
+Neural_Network_ADASYN               CortexM4             0.081548        0.008920        0.8920         
+Neural_Network_ADASYN               MSP430               2.740000        0.009864        0.9864         
+Neural_Network_BorderlineSMOTE      CortexM4             0.081548        0.009152        0.9152         
+Neural_Network_BorderlineSMOTE      MSP430               2.740000        0.009864        0.9864         
+Neural_Network_Conservative_SMOTE   CortexM4             0.081548        0.009072        0.9072         
+Neural_Network_Conservative_SMOTE   MSP430               2.740000        0.009864        0.9864         
+Neural_Network_SMOTE_ENN            CortexM4             0.081548        0.008371        0.8371         
+Neural_Network_SMOTE_ENN            MSP430               2.740000        0.009864        0.9864         
+Random_Forest_ADASYN                CortexM4             0.008208        1.996342        199.6342       
+Random_Forest_ADASYN                MSP430               0.212640        0.603694        60.3694        
+Random_Forest_BorderlineSMOTE       CortexM4             0.007923        1.995292        199.5292       
+Random_Forest_BorderlineSMOTE       MSP430               0.204960        0.603376        60.3376        
+Random_Forest_Conservative_SMOTE    CortexM4             0.007845        1.999649        199.9649       
+Random_Forest_Conservative_SMOTE    MSP430               0.202880        0.604694        60.4694        
+Random_Forest_SMOTE_ENN             CortexM4             0.007911        1.995438        199.5438       
+Random_Forest_SMOTE_ENN             MSP430               0.204640        0.603420        60.3420        
+--------------------------------------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+7. REAL-TIME FEASIBILITY ANALYSIS
+--------------------------------------------------------------------------------
+
+Worst-case inference deadline: 100.0 ms (at 10 Hz)
+
+Feasibility Assessment:
+  Gradient_Boosting_Conservative_SMOTE on MSP430    : FEASIBLE (margin: 99.1510 ms, 99.15%)
+  Gradient_Boosting_Conservative_SMOTE on CortexM4  : FEASIBLE (margin: 99.9669 ms, 99.97%)
+  Random_Forest_Conservative_SMOTE    on MSP430    : FEASIBLE (margin: 99.7971 ms, 99.80%)
+  Random_Forest_Conservative_SMOTE    on CortexM4  : FEASIBLE (margin: 99.9922 ms, 99.99%)
+  Gradient_Boosting_SMOTE_ENN         on MSP430    : FEASIBLE (margin: 99.1282 ms, 99.13%)
+  Gradient_Boosting_SMOTE_ENN         on CortexM4  : FEASIBLE (margin: 99.9661 ms, 99.97%)
+  Gradient_Boosting_BorderlineSMOTE   on MSP430    : FEASIBLE (margin: 99.1434 ms, 99.14%)
+  Gradient_Boosting_BorderlineSMOTE   on CortexM4  : FEASIBLE (margin: 99.9666 ms, 99.97%)
+  Random_Forest_BorderlineSMOTE       on MSP430    : FEASIBLE (margin: 99.7950 ms, 99.80%)
+  Random_Forest_BorderlineSMOTE       on CortexM4  : FEASIBLE (margin: 99.9921 ms, 99.99%)
+  Neural_Network_Conservative_SMOTE   on MSP430    : FEASIBLE (margin: 97.2600 ms, 97.26%)
+  Neural_Network_Conservative_SMOTE   on CortexM4  : FEASIBLE (margin: 99.9185 ms, 99.92%)
+  Gradient_Boosting_ADASYN            on MSP430    : FEASIBLE (margin: 99.1214 ms, 99.12%)
+  Gradient_Boosting_ADASYN            on CortexM4  : FEASIBLE (margin: 99.9658 ms, 99.97%)
+  Random_Forest_SMOTE_ENN             on MSP430    : FEASIBLE (margin: 99.7954 ms, 99.80%)
+  Random_Forest_SMOTE_ENN             on CortexM4  : FEASIBLE (margin: 99.9921 ms, 99.99%)
+  HistGradient_Boosting_SMOTE_ENN     on MSP430    : FEASIBLE (margin: 99.4792 ms, 99.48%)
+  HistGradient_Boosting_SMOTE_ENN     on CortexM4  : FEASIBLE (margin: 99.9797 ms, 99.98%)
+  HistGradient_Boosting_Conservative_SMOTE on MSP430    : FEASIBLE (margin: 99.4456 ms, 99.45%)
+  HistGradient_Boosting_Conservative_SMOTE on CortexM4  : FEASIBLE (margin: 99.9784 ms, 99.98%)
+  HistGradient_Boosting_BorderlineSMOTE on MSP430    : FEASIBLE (margin: 99.4120 ms, 99.41%)
+  HistGradient_Boosting_BorderlineSMOTE on CortexM4  : FEASIBLE (margin: 99.9771 ms, 99.98%)
+  Extra_Trees_Conservative_SMOTE      on MSP430    : FEASIBLE (margin: 99.7893 ms, 99.79%)
+  Extra_Trees_Conservative_SMOTE      on CortexM4  : FEASIBLE (margin: 99.9919 ms, 99.99%)
+  Extra_Trees_SMOTE_ENN               on MSP430    : FEASIBLE (margin: 99.7888 ms, 99.79%)
+  Extra_Trees_SMOTE_ENN               on CortexM4  : FEASIBLE (margin: 99.9918 ms, 99.99%)
+  Neural_Network_BorderlineSMOTE      on MSP430    : FEASIBLE (margin: 97.2600 ms, 97.26%)
+  Neural_Network_BorderlineSMOTE      on CortexM4  : FEASIBLE (margin: 99.9185 ms, 99.92%)
+  Random_Forest_ADASYN                on MSP430    : FEASIBLE (margin: 99.7874 ms, 99.79%)
+  Random_Forest_ADASYN                on CortexM4  : FEASIBLE (margin: 99.9918 ms, 99.99%)
+  HistGradient_Boosting_ADASYN        on MSP430    : FEASIBLE (margin: 99.3196 ms, 99.32%)
+  HistGradient_Boosting_ADASYN        on CortexM4  : FEASIBLE (margin: 99.9735 ms, 99.97%)
+  Extra_Trees_BorderlineSMOTE         on MSP430    : FEASIBLE (margin: 99.7885 ms, 99.79%)
+  Extra_Trees_BorderlineSMOTE         on CortexM4  : FEASIBLE (margin: 99.9918 ms, 99.99%)
+  Neural_Network_SMOTE_ENN            on MSP430    : FEASIBLE (margin: 97.2600 ms, 97.26%)
+  Neural_Network_SMOTE_ENN            on CortexM4  : FEASIBLE (margin: 99.9185 ms, 99.92%)
+  Logistic_Regression_SMOTE_ENN       on MSP430    : FEASIBLE (margin: 99.9640 ms, 99.96%)
+  Logistic_Regression_SMOTE_ENN       on CortexM4  : FEASIBLE (margin: 99.9987 ms, 100.00%)
+  Neural_Network_ADASYN               on MSP430    : FEASIBLE (margin: 97.2600 ms, 97.26%)
+  Neural_Network_ADASYN               on CortexM4  : FEASIBLE (margin: 99.9185 ms, 99.92%)
+  Logistic_Regression_Conservative_SMOTE on MSP430    : FEASIBLE (margin: 99.9640 ms, 99.96%)
+  Logistic_Regression_Conservative_SMOTE on CortexM4  : FEASIBLE (margin: 99.9987 ms, 100.00%)
+  Logistic_Regression_BorderlineSMOTE on MSP430    : FEASIBLE (margin: 99.9640 ms, 99.96%)
+  Logistic_Regression_BorderlineSMOTE on CortexM4  : FEASIBLE (margin: 99.9987 ms, 100.00%)
+  Extra_Trees_ADASYN                  on MSP430    : FEASIBLE (margin: 99.7821 ms, 99.78%)
+  Extra_Trees_ADASYN                  on CortexM4  : FEASIBLE (margin: 99.9916 ms, 99.99%)
+  Logistic_Regression_ADASYN          on MSP430    : FEASIBLE (margin: 99.9640 ms, 99.96%)
+  Logistic_Regression_ADASYN          on CortexM4  : FEASIBLE (margin: 99.9987 ms, 100.00%)
+
+--------------------------------------------------------------------------------
+8. INFERENCE INTEGRATION PSEUDOCODE
+--------------------------------------------------------------------------------
+
+ALGORITHM: Real-time IDS Inference at Cluster Head
+---------------------------------------------------
+
+PROCEDURE CH_IDS_Inference(packet)
+    INPUT: Received MAC-layer packet from cluster member
+    OUTPUT: Classification result (Normal/Attack type)
+    
+    // Step 1: Feature Extraction
+    features[16] ← ExtractMACFeatures(packet)
+    
+    // Step 2: Pre-processing
+    normalized_features ← Normalize(features, stored_scaler)
+    
+    // Step 3: Model Inference (single sample)
+    prediction ← Model.Predict(normalized_features)
+    
+    // Step 4: Response Action
+    IF prediction ≠ NORMAL THEN
+        LogAlert(packet.source, prediction)
+        IF IsCriticalAttack(prediction) THEN
+            BlockNode(packet.source)
+        END IF
+    END IF
+    
+    // Step 5: Continue normal LEACH operation
+    ForwardToBaseStation(packet, prediction)
+    
+    RETURN prediction
+END PROCEDURE
+
+PROCEDURE LEACH_Round_With_IDS()
+    // Setup Phase (normal LEACH)
+    BroadcastAdvertisement()
+    ReceiveJoinRequests()
+    CreateTDMASchedule()
+    
+    // Steady-State Phase with IDS
+    FOR EACH scheduled_slot DO
+        packet ← ReceiveFromMember()
+        
+        // Inline IDS inference
+        start_time ← GetSystemTime()
+        result ← CH_IDS_Inference(packet)
+        inference_time ← GetSystemTime() - start_time
+        
+        // Deadline check
+        IF inference_time > DEADLINE_THRESHOLD THEN
+            LogLatencyViolation()
+        END IF
+    END FOR
+    
+    // Aggregate and forward to BS
+    AggregateAndForward()
+END PROCEDURE
+
+
+--------------------------------------------------------------------------------
+9. INFERENCE DEPLOYMENT DIAGRAM
+--------------------------------------------------------------------------------
+
+                        LEACH-Based WSN with IDS at Cluster Head
+                        ========================================
+
+    +------------------+
+    |   Base Station   |  ← Receives filtered/classified data
+    +------------------+
+            ▲
+            │ Aggregated data + alerts
+            │
+    +-------┴--------+     +----------------+     +----------------+
+    |  Cluster Head  |     | Cluster Head   |     | Cluster Head   |
+    |  [IDS MODEL]   |     | [IDS MODEL]    |     | [IDS MODEL]    |
+    |                |     |                |     |                |
+    | - Inference    |     | - Inference    |     | - Inference    |
+    | - Detection    |     | - Detection    |     | - Detection    |
+    | - Alerting     |     | - Alerting     |     | - Alerting     |
+    +----------------+     +----------------+     +----------------+
+      ▲   ▲   ▲              ▲   ▲   ▲              ▲   ▲   ▲
+      │   │   │              │   │   │              │   │   │
+    +---+ │ +---+          +---+ │ +---+          +---+ │ +---+
+    |SN1| │ |SN3|          |SN4| │ |SN6|          |SN7| │ |SN9|
+    +---+ │ +---+          +---+ │ +---+          +---+ │ +---+
+        +---+                  +---+                  +---+
+        |SN2|                  |SN5|                  |SN8|
+        +---+                  +---+                  +---+
+        
+    Cluster 1              Cluster 2              Cluster 3
+
+    Legend:
+    - SN: Sensor Node (data source)
+    - CH: Cluster Head (inference location)
+    - BS: Base Station (central monitoring)
+    
+    Data Flow:
+    1. Sensor nodes transmit to their Cluster Head
+    2. CH extracts features from received packets
+    3. CH runs IDS inference (per-packet)
+    4. CH classifies traffic as Normal/Attack
+    5. CH aggregates data and forwards to BS with classification
+
+
+--------------------------------------------------------------------------------
+10. LIMITATIONS AND CAVEATS
+--------------------------------------------------------------------------------
+
+This evaluation has the following limitations:
+
+1. NO REAL HARDWARE DEPLOYMENT
+   - Latency measurements are empirical estimates from host machine
+   - Analytical estimates are based on operation counts, not actual embedded profiling
+   - Real embedded performance may vary due to cache effects, memory access patterns
+
+2. SIMPLIFIED OPERATION MODEL
+   - Operation counts are approximations based on model structure
+   - Does not account for memory hierarchy effects
+   - Assumes ideal execution without interrupts
+
+3. FEATURE EXTRACTION OVERHEAD NOT INCLUDED
+   - Reported latency is inference-only
+   - Real deployment must add feature extraction time
+   - Packet parsing and preprocessing add additional overhead
+
+4. ENERGY MODEL LIMITATIONS
+   - Power consumption is based on datasheet typical values
+   - Does not account for voltage scaling or dynamic power management
+   - Actual energy consumption depends on specific implementation
+
+5. LEACH TIMING ASSUMPTIONS
+   - Round duration and packet counts are estimates
+   - Actual values depend on network size and configuration
+   - Real-time constraints may be tighter in some deployments
+
+
+--------------------------------------------------------------------------------
+11. CONCLUSIONS
+--------------------------------------------------------------------------------
+
+Based on the inference latency evaluation:
+
+1. FASTEST MODEL: Logistic_Regression_Conservative_SMOTE
+   - Mean latency: 0.0333 ms (host machine)
+   - P95 latency: 0.0345 ms
+
+2. DEPLOYMENT FEASIBILITY:
+   - All evaluated models meet real-time constraints on Cortex-M4
+   - MSP430 deployment is feasible for simpler models
+   - Tree-based ensembles offer best latency-accuracy trade-off
+
+3. ENERGY EFFICIENCY:
+   - Inference energy cost is minimal compared to communication
+   - IDS overhead does not significantly impact WSN lifetime
+
+4. RECOMMENDATION:
+   - Deploy gradient boosting or random forest models at Cluster Head
+   - Use Cortex-M4 class devices for reliable real-time performance
+   - Implement periodic model updates via Base Station
+
+
+================================================================================
+END OF REPORT
+================================================================================

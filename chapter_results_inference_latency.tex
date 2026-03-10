@@ -1,0 +1,544 @@
+% !TEX root = main.tex
+
+% Results and Explanation: Inference Latency Evaluation
+% This section presents the empirical and analytical latency results for IDS deployment in LEACH-based WSN
+
+\subsection{Inference Latency Evaluation}
+
+This subsection evaluates the computational feasibility of deploying the trained IDS models on resource-constrained WSN hardware. The evaluation employs a hybrid methodology combining empirical profiling on a host machine with analytical cycle-based estimation for embedded platforms. While the primary focus of this research is the comparative evaluation of machine learning models trained with various oversampling strategies, an evaluation that considers only classification accuracy metrics without addressing computational feasibility would be incomplete from a systems perspective.
+
+\subsubsection{Deployment Context and Architectural Assumptions}
+
+The IDS inference is assumed to execute at the Cluster Head (CH) rather than at individual sensor nodes or the Base Station. This architectural decision is justified by three considerations:
+
+\begin{enumerate}
+    \item \textbf{Feature Availability}: The CH naturally aggregates traffic from all cluster members, providing visibility into the communication patterns necessary for detecting network-layer attacks. The feature set employed in this study---comprising MAC-layer packet attributes including advertisement counts (ADV\_S, ADV\_R), join request counts (JOIN\_S, JOIN\_R), schedule counts (SCH\_S, SCH\_R), and data transmission counts (DATA\_S, DATA\_R)---is directly observable at the CH level.
+    
+    \item \textbf{LEACH Communication Pattern}: In LEACH, CHs receive all data from member nodes before forwarding to the Base Station. This natural aggregation point allows inspection of all cluster traffic, and detection at CH prevents malicious data from reaching the Base Station.
+    
+    \item \textbf{Energy Distribution}: The CH role rotates among nodes in LEACH, distributing the computational burden of IDS inference across the network over time, thereby mitigating energy concentration concerns.
+\end{enumerate}
+
+The inference execution model assumes per-packet inspection with batch size of one, triggered after feature extraction from each received packet. The 16 MAC-layer features require 64 bytes of storage (16 features $\times$ 4 bytes per float). For a typical LEACH round duration of 20 seconds processing approximately 100 packets, the worst-case inference frequency is 10~Hz.
+
+\subsubsection{Target Device Profiles}
+
+Two representative embedded platforms are considered for deployment feasibility analysis, representing the spectrum of WSN-capable microcontrollers:
+
+\begin{table}[htbp]
+\centering
+\caption{Target Embedded Platform Specifications}
+\label{tab:device_profiles}
+\begin{tabular}{lcc}
+\hline
+\textbf{Parameter} & \textbf{MSP430F5529} & \textbf{ARM Cortex-M4} \\
+\hline
+Architecture & 16-bit RISC & 32-bit ARMv7-M \\
+Clock Frequency & 25 MHz & 168 MHz \\
+RAM & 8 KB & 192 KB \\
+Flash & 128 KB & 1024 KB \\
+Active Power & 3.6 mW & 80 mW \\
+Floating-Point Unit & None & Hardware FPU \\
+Pipeline & In-order, 3-stage & In-order, 3-stage \\
+\hline
+\end{tabular}
+\end{table}
+
+The MSP430F5529 represents ultra-low-power 16-bit MCUs commonly used in energy-harvesting WSN nodes. The ARM Cortex-M4 represents mid-range 32-bit MCUs with hardware floating-point support, suitable for Cluster Heads with higher computational requirements.
+
+\subsubsection{Evaluation Methodology}
+
+The latency evaluation methodology comprises two complementary approaches: empirical profiling and analytical estimation.
+
+\paragraph{Empirical Profiling} Empirical measurements capture the actual computational behavior of complex algorithms but are obtained on a host machine (laptop CPU) rather than the target embedded platform. To approximate edge-device execution characteristics, the following constraints are imposed:
+
+\begin{itemize}
+    \item \textbf{Single-Core Execution}: Process affinity binds inference to a single CPU core, eliminating parallelism benefits unavailable on single-core MCUs.
+    \item \textbf{Single-Threaded Inference}: Library-level threading parameters are configured to enforce sequential execution.
+    \item \textbf{Batch Size of One}: Inference is performed on individual samples, reflecting per-packet processing without batching opportunities.
+    \item \textbf{CPU-Only Execution}: No GPU acceleration or specialized inference accelerators are used.
+\end{itemize}
+
+The measurement protocol executes 10,000 inference iterations per model with 100 warm-up iterations to eliminate cold-start effects (cache warming, JIT compilation, CPU frequency stabilization). Timing uses high-resolution performance counters with sub-microsecond precision.
+
+\paragraph{Analytical Estimation} Analytical modeling bridges the gap between host machine measurements and embedded platform projections by counting primitive operations and mapping them to architecture-specific cycle costs. The cycle cost values are derived from manufacturer technical documentation and established embedded systems literature:
+
+\begin{table}[htbp]
+\centering
+\caption{Cycle Costs per Operation by Architecture}
+\label{tab:cycle_costs}
+\begin{tabular}{lcccc}
+\hline
+\textbf{Device} & \textbf{Comparison} & \textbf{Addition} & \textbf{Multiplication} & \textbf{Division} \\
+\hline
+MSP430F5529 & 4 cycles & 2 cycles & 8 cycles & 20 cycles \\
+ARM Cortex-M4 & 1 cycle & 1 cycle & 1 cycle & 12 cycles \\
+\hline
+\end{tabular}
+\end{table}
+
+\paragraph{Sources for Cycle Cost Values}
+The cycle costs for the MSP430F5529 are obtained from the Texas Instruments \textit{MSP430x5xx and MSP430x6xx Family User's Guide} (Document SLAU208Q)~\cite{ti_msp430_userguide}. Specifically, the instruction timing information is documented in Chapter 6 (RISC-16 CPU), which specifies that:
+\begin{itemize}
+    \item Basic ALU operations (ADD, SUB, CMP) execute in 1--2 cycles for register-to-register operations, but 3--4 cycles when involving memory operands typical in tree traversal comparisons.
+    \item The MSP430 lacks a hardware multiplier in base configurations; software multiplication routines require 8--10 cycles for 16-bit operands as documented in Texas Instruments Application Report SLAA329~\cite{ti_msp430_multiply}.
+    \item Division operations require software emulation, consuming 18--25 cycles depending on operand size, as characterized in the TI software library documentation.
+\end{itemize}
+
+The cycle costs for the ARM Cortex-M4 are derived from the \textit{ARM Cortex-M4 Technical Reference Manual} (Document DDI0439D)~\cite{arm_cortexm4_trm} and the \textit{ARMv7-M Architecture Reference Manual}~\cite{arm_armv7m_arm}. The Cortex-M4 processor features:
+\begin{itemize}
+    \item Single-cycle execution for most data processing instructions (ADD, SUB, CMP, MUL) due to the 3-stage pipeline and single-cycle multiplier.
+    \item Hardware floating-point unit (FPU) implementing the FPv4-SP extension, providing single-cycle throughput for single-precision floating-point operations~\cite{arm_cortexm4_fpu}.
+    \item The SDIV/UDIV instructions execute in 2--12 cycles depending on operand values, with worst-case latency of 12 cycles as specified in the Cortex-M4 instruction timing documentation.
+\end{itemize}
+
+These cycle cost characterizations are consistent with empirical benchmarking studies in embedded machine learning literature, including the comprehensive survey by Warden and Situnayake on TinyML deployment~\cite{warden2019tinyml} and the embedded inference benchmarking methodology proposed by Banbury et al.~\cite{banbury2021mlperf}.
+
+\paragraph{Latency Estimation Model}
+The total cycle count is computed as:
+\begin{equation}
+    C_{total} = N_{cmp} \cdot C_{cmp} + N_{add} \cdot C_{add} + N_{mul} \cdot C_{mul} + N_{div} \cdot C_{div}
+\end{equation}
+
+This formulation follows the classical cycle-based performance estimation methodology established in computer architecture literature. The foundational relationship between instruction count, cycles per instruction (CPI), and execution time is formalized in Hennessy and Patterson's \textit{Computer Architecture: A Quantitative Approach}~\cite{hennessy2017computer} as:
+\begin{equation}
+    T_{execution} = \frac{N_{instructions} \times CPI}{f_{clock}}
+\end{equation}
+
+For heterogeneous instruction mixes, this generalizes to the weighted sum formulation used in this study. The estimated latency in milliseconds is then:
+\begin{equation}
+    T_{est} = \frac{C_{total}}{f_{clock}} \times 1000
+\end{equation}
+where $f_{clock}$ is the clock frequency in Hz. This approach has been validated for embedded ML inference estimation in prior works including David et al.'s TensorFlow Lite Micro benchmarking study~\cite{david2021tensorflow} and the MLPerf Tiny benchmark suite~\cite{banbury2021mlperf}.
+
+\subsubsection{Operation Counting by Model Architecture}
+
+Different model architectures exhibit distinct computational patterns. This section details the operation counting methodology for each classifier type.
+
+\paragraph{Tree-Based Ensemble Models (Random Forest, Extra Trees)}
+For an ensemble of $T$ trees, each inference traverses a root-to-leaf path in every tree. The number of comparisons per tree equals the path length, bounded by tree depth. For a tree with $N_{nodes}$ nodes:
+\begin{equation}
+    \text{Comparisons per tree} \approx \log_2(N_{nodes})
+\end{equation}
+\begin{equation}
+    \text{Total comparisons} = T \times \log_2\left(\frac{N_{total}}{T}\right)
+\end{equation}
+Additionally, $T$ additions are required to aggregate predictions through voting or averaging. For Random Forest with 100 trees and approximately 1,200 total comparisons, the computation is dominated by comparison operations with minimal arithmetic overhead.
+
+\paragraph{Gradient Boosting Models}
+For gradient boosting with $T$ stages across $C$ classes (one-vs-rest encoding for multi-class), the total trees equals $T \times C$. Each tree traversal requires comparisons proportional to tree depth $\bar{d}$:
+\begin{equation}
+    \text{Total comparisons} = T \times C \times \bar{d}
+\end{equation}
+The stage-wise predictions require $T \times C$ additions for accumulation. With 100 boosting stages and 5 classes, this yields 500 trees and approximately 5,000--5,200 comparisons.
+
+\paragraph{Neural Network (MLP Classifier)}
+For a network with layers $\{n_0, n_1, \ldots, n_L\}$ where $n_0 = 16$ (input features) and $n_L = 5$ (output classes):
+\begin{equation}
+    \text{Multiplications} = \sum_{\ell=1}^{L} n_{\ell-1} \times n_\ell
+\end{equation}
+\begin{equation}
+    \text{Additions} = \sum_{\ell=1}^{L} \left[ (n_{\ell-1} - 1) \times n_\ell + n_\ell \right]
+\end{equation}
+The MLP architecture with hidden layers yields approximately 6,850 multiplications and 6,850 additions, making it the most compute-intensive model on platforms without hardware floating-point support.
+
+\paragraph{Logistic Regression}
+For $d = 16$ features and $C = 5$ classes:
+\begin{equation}
+    z_c = \sum_{i=1}^{d} w_{ic} \cdot x_i + b_c \quad \text{for each class } c
+\end{equation}
+This requires $d \times C = 80$ multiplications and $(d-1) \times C + C = 80$ additions, plus $C$ divisions for softmax normalization. Logistic Regression is the most computationally efficient model.
+
+\subsubsection{Empirical Latency Results}
+
+Table~\ref{tab:empirical_latency} presents the empirical inference latency measured on the host machine. Models are grouped by architecture to facilitate comparison. Three statistics are reported: mean latency ($\mu$), 95th percentile (P95), and maximum observed latency. The P95 metric is particularly relevant for real-time systems, as it indicates the latency exceeded by only 5\% of inferences.
+
+\begin{table}[htbp]
+\centering
+\caption{Empirical Inference Latency (Host Machine, 10,000 iterations)}
+\label{tab:empirical_latency}
+\begin{tabular}{lccc}
+\hline
+\textbf{Model} & \textbf{Mean (ms)} & \textbf{P95 (ms)} & \textbf{Max (ms)} \\
+\hline
+\multicolumn{4}{l}{\textit{Logistic Regression}} \\
+\quad Conservative SMOTE & 0.033 & 0.035 & 0.134 \\
+\quad SMOTE-ENN & 0.034 & 0.035 & 0.089 \\
+\quad ADASYN & 0.034 & 0.040 & 0.094 \\
+\quad BorderlineSMOTE & 0.034 & 0.034 & 0.072 \\
+\hline
+\multicolumn{4}{l}{\textit{Neural Network (MLP)}} \\
+\quad SMOTE-ENN & 0.059 & 0.067 & 0.177 \\
+\quad ADASYN & 0.062 & 0.069 & 0.247 \\
+\quad Conservative SMOTE & 0.064 & 0.066 & 2.792 \\
+\quad BorderlineSMOTE & 0.064 & 0.068 & 0.314 \\
+\hline
+\multicolumn{4}{l}{\textit{Gradient Boosting}} \\
+\quad Conservative SMOTE & 0.317 & 0.355 & 2.328 \\
+\quad BorderlineSMOTE & 0.321 & 0.343 & 1.415 \\
+\quad ADASYN & 0.323 & 0.348 & 2.151 \\
+\quad SMOTE-ENN & 0.330 & 0.365 & 1.258 \\
+\hline
+\multicolumn{4}{l}{\textit{HistGradient Boosting}} \\
+\quad SMOTE-ENN & 10.64 & 17.24 & 84.47 \\
+\quad Conservative SMOTE & 10.92 & 20.02 & 66.61 \\
+\quad BorderlineSMOTE & 11.79 & 19.34 & 76.71 \\
+\quad ADASYN & 13.09 & 22.63 & 77.74 \\
+\hline
+\multicolumn{4}{l}{\textit{Random Forest / Extra Trees}} \\
+\quad All variants & 13.89--14.00 & 14.36--14.61 & 35.73--42.69 \\
+\hline
+\end{tabular}
+\end{table}
+
+The empirical results reveal a clear latency hierarchy across model architectures. Logistic Regression exhibits the lowest latency ($\mu \approx 0.033$~ms), followed by Neural Network ($\mu \approx 0.06$~ms), Gradient Boosting ($\mu \approx 0.32$~ms), and ensemble methods (Random Forest, Extra Trees, HistGradient Boosting) with substantially higher latency ($\mu > 10$~ms). 
+
+Several important observations emerge from these measurements:
+
+\begin{enumerate}
+    \item \textbf{Oversampling Strategy Independence}: The oversampling strategy has minimal impact on inference latency within each model type. For example, all Logistic Regression variants exhibit mean latency within 0.001~ms of each other. This is expected since oversampling affects training data distribution rather than the learned model structure.
+    
+    \item \textbf{Latency Variability}: The ratio between P95 and mean latency indicates execution stability. Logistic Regression shows minimal variability (P95/mean $\approx$ 1.03), while HistGradient Boosting exhibits higher variability (P95/mean $\approx$ 1.6--1.7) due to data-dependent tree traversal paths.
+    
+    \item \textbf{Maximum Latency Spikes}: Occasional latency spikes (max $\gg$ P95) are observed, attributable to operating system scheduling interference. These spikes would not occur in bare-metal embedded deployments but inform worst-case analysis.
+\end{enumerate}
+
+\paragraph{Interpretation Constraints}
+It is essential to note that these empirical measurements serve as \textit{relative complexity indicators} rather than absolute deployment predictions. The laptop CPU's architectural advantages (out-of-order execution, large caches, speculative execution) do not transfer to embedded platforms. The primary valid use of empirical measurements is ranking model computational complexity for comparative purposes.
+
+\subsubsection{Analytical Latency Estimation for Embedded Platforms}
+
+The analytical estimation translates operation counts into platform-specific latency projections. Table~\ref{tab:analytical_latency} presents the operation counts and projected latency for both target platforms.
+
+\begin{table}[htbp]
+\centering
+\caption{Analytical Operation Counts and Estimated Latency by Device}
+\label{tab:analytical_latency}
+\begin{tabular}{lcccc}
+\hline
+\textbf{Model Type} & \textbf{Comparisons} & \textbf{Add/Mul} & \textbf{MSP430 (ms)} & \textbf{Cortex-M4 (ms)} \\
+\hline
+Logistic Regression & 0 & 80/80 & 0.036 & 0.001 \\
+Neural Network & 0 & 6,850/6,850 & 2.740 & 0.082 \\
+Gradient Boosting & 5,056--5,241 & 500/0 & 0.849--0.879 & 0.033--0.034 \\
+HistGradient Boosting & 3,100--4,050 & 310--405/0 & 0.521--0.680 & 0.020--0.027 \\
+Random Forest & 1,218--1,279 & 100/0 & 0.203--0.213 & 0.008 \\
+Extra Trees & 1,267--1,312 & 100/0 & 0.211--0.218 & 0.008 \\
+\hline
+\end{tabular}
+\end{table}
+
+\paragraph{Calculation Example: Gradient Boosting on MSP430}
+Consider the Gradient Boosting model trained with Conservative SMOTE, which contains 100 boosting stages across 5 classes (500 trees total) with 50,560 total nodes. The operation count is:
+\begin{align}
+    \text{Average nodes per tree} &= \frac{50,560}{500} = 101.12 \\
+    \text{Average depth} &= \log_2(101.12) \approx 6.66 \\
+    N_{cmp} &= 500 \times 6.66 = 3,330 \text{ (estimated)} \\
+    N_{add} &= 500 \text{ (stage-wise accumulation)}
+\end{align}
+
+The actual measured comparison count is 5,056 (higher due to unbalanced trees). The cycle count on MSP430 is:
+\begin{align}
+    C_{total} &= 5,056 \times 4 + 500 \times 2 = 20,224 + 1,000 = 21,224 \text{ cycles} \\
+    T_{MSP430} &= \frac{21,224}{25 \times 10^6} \times 1000 = 0.849 \text{ ms}
+\end{align}
+
+For Cortex-M4 at 168~MHz with single-cycle operations:
+\begin{align}
+    C_{total} &= 5,056 \times 1 + 500 \times 1 = 5,556 \text{ cycles} \\
+    T_{CortexM4} &= \frac{5,556}{168 \times 10^6} \times 1000 = 0.033 \text{ ms}
+\end{align}
+
+\paragraph{Platform-Dependent Characteristics}
+The analytical estimates reveal important insights about model behavior across platforms:
+
+\begin{enumerate}
+    \item \textbf{Logistic Regression} achieves sub-millisecond latency on both platforms (0.036~ms on MSP430, 0.001~ms on Cortex-M4), making it ideal for ultra-low-latency applications where classification simplicity is acceptable.
+    
+    \item \textbf{Gradient Boosting} exhibits moderate latency (0.85--0.88~ms on MSP430, 0.033--0.034~ms on Cortex-M4). Despite having more comparisons than ensemble methods, the sequential nature of boosting (one tree per stage) results in predictable cache-friendly execution.
+    
+    \item \textbf{Random Forest and Extra Trees}, despite high empirical latency on the host machine ($>$13~ms), project to efficient embedded execution (0.20--0.22~ms on MSP430). The discrepancy arises because empirical measurements include Python interpreter overhead and scikit-learn's generalized tree traversal implementation, while analytical estimation reflects the fundamental algorithmic complexity.
+    
+    \item \textbf{Neural Network} incurs the highest latency on MSP430 (2.74~ms) due to intensive matrix multiplications without hardware FPU support. Each multiplication requires 8 cycles on MSP430 (software emulation), whereas Cortex-M4's hardware FPU executes in a single cycle, explaining the 33$\times$ speedup.
+    
+    \item \textbf{HistGradient Boosting} shows lower analytical latency than standard Gradient Boosting despite higher empirical latency. This is because HistGradient Boosting uses histogram-based binning that adds overhead in the Python implementation but translates to fewer comparisons in the underlying tree structure.
+\end{enumerate}
+
+\paragraph{Empirical vs. Analytical Correlation}
+The correlation between empirical and analytical latency reveals implementation effects distinct from algorithmic complexity:
+
+\begin{table}[htbp]
+\centering
+\caption{Comparison of Empirical and Analytical Latency Rankings}
+\label{tab:latency_comparison}
+\begin{tabular}{lcc}
+\hline
+\textbf{Model} & \textbf{Empirical Rank} & \textbf{Analytical Rank (MSP430)} \\
+\hline
+Logistic Regression & 1 (fastest) & 1 (fastest) \\
+Neural Network & 2 & 6 (slowest) \\
+Gradient Boosting & 3 & 5 \\
+HistGradient Boosting & 4 & 4 \\
+Random Forest & 5 & 2 \\
+Extra Trees & 6 (slowest) & 3 \\
+\hline
+\end{tabular}
+\end{table}
+
+The ranking discrepancy for ensemble methods (Random Forest, Extra Trees) highlights the difference between Python/scikit-learn implementation overhead and bare-metal algorithmic execution. For deployment planning, the analytical estimates are more representative of embedded performance.
+
+\subsubsection{Real-Time Feasibility Analysis}
+
+The real-time feasibility of IDS deployment depends on the relationship between inference latency and the available processing window within the LEACH protocol timing structure.
+
+\paragraph{Timing Constraints Derivation}
+In a typical LEACH configuration, the steady-state phase lasts 20 seconds with 100 member nodes transmitting in their respective TDMA slots. The inter-packet arrival time is:
+\begin{equation}
+    T_{slot} = \frac{20 \text{ s}}{100 \text{ packets}} = 200 \text{ ms}
+\end{equation}
+
+However, considering guard times, channel access delays, and data aggregation requirements, the practical processing window is conservatively estimated at 100~ms per packet. This establishes the real-time deadline:
+\begin{equation}
+    T_{deadline} = 100 \text{ ms}
+\end{equation}
+
+The feasibility margin quantifies how much headroom exists:
+\begin{equation}
+    \text{Margin} = \frac{T_{deadline} - T_{inference}}{T_{deadline}} \times 100\%
+\end{equation}
+
+\paragraph{Feasibility Assessment Results}
+Table~\ref{tab:feasibility} summarizes the feasibility analysis for all model types on both platforms.
+
+\begin{table}[htbp]
+\centering
+\caption{Real-Time Feasibility Assessment (100~ms deadline)}
+\label{tab:feasibility}
+\begin{tabular}{lcccc}
+\hline
+\textbf{Model Type} & \multicolumn{2}{c}{\textbf{MSP430}} & \multicolumn{2}{c}{\textbf{Cortex-M4}} \\
+ & Latency & Margin & Latency & Margin \\
+\hline
+Logistic Regression & 0.036~ms & 99.96\% & 0.001~ms & 99.99\% \\
+Neural Network & 2.740~ms & 97.26\% & 0.082~ms & 99.92\% \\
+Gradient Boosting & 0.879~ms & 99.12\% & 0.034~ms & 99.97\% \\
+HistGradient Boosting & 0.680~ms & 99.32\% & 0.027~ms & 99.97\% \\
+Random Forest & 0.213~ms & 99.79\% & 0.008~ms & 99.99\% \\
+Extra Trees & 0.218~ms & 99.78\% & 0.008~ms & 99.99\% \\
+\hline
+\end{tabular}
+\end{table}
+
+All evaluated models satisfy the real-time constraint with margins exceeding 97\% on MSP430 and 99.9\% on Cortex-M4. Even the slowest model (Neural Network on MSP430 at 2.74~ms) utilizes less than 3\% of the available processing window.
+
+\paragraph{Implications for Protocol Operation}
+The large feasibility margins have several practical implications:
+
+\begin{enumerate}
+    \item \textbf{No Protocol Modification Required}: The IDS inference can be integrated into existing LEACH implementations without modifying TDMA timing or slot allocations.
+    
+    \item \textbf{Headroom for Additional Processing}: The available margin can accommodate feature extraction, logging, alert generation, and other ancillary operations alongside inference.
+    
+    \item \textbf{Burst Traffic Tolerance}: Even under burst conditions where multiple packets arrive in rapid succession, the cumulative processing time remains well within bounds.
+    
+    \item \textbf{Scalability}: The margins suggest that more complex models or additional IDS features could be incorporated without violating real-time constraints.
+\end{enumerate}
+
+\subsubsection{Energy Consumption Analysis}
+
+Energy consumption is a critical constraint in WSN deployments where sensor nodes operate on limited battery capacity. This section quantifies the energy cost of IDS inference and its impact on network lifetime.
+
+\paragraph{Energy Model}
+The energy consumed during inference follows the fundamental relationship:
+\begin{equation}
+    E_{inference} = P_{active} \times T_{inference}
+\end{equation}
+where $P_{active}$ is the active power consumption and $T_{inference}$ is the inference latency. For per-round energy consumption with $N$ packets:
+\begin{equation}
+    E_{round} = N \times E_{inference} = N \times P_{active} \times T_{inference}
+\end{equation}
+
+\paragraph{Energy Calculation Example}
+For Gradient Boosting on MSP430 with $T_{inference} = 0.879$ ms and $P_{active} = 3.6$ mW:
+\begin{align}
+    E_{inference} &= 3.6 \text{ mW} \times 0.879 \text{ ms} = 3.16 \text{ }\mu\text{J} \\
+    E_{round} &= 100 \times 3.16 \text{ }\mu\text{J} = 316 \text{ }\mu\text{J} = 0.316 \text{ mJ}
+\end{align}
+
+Table~\ref{tab:energy} presents the energy costs for both platforms across all model types.
+
+\begin{table}[htbp]
+\centering
+\caption{Energy Consumption per Inference and per LEACH Round}
+\label{tab:energy}
+\begin{tabular}{lcccc}
+\hline
+\textbf{Model Type} & \multicolumn{2}{c}{\textbf{MSP430 (3.6~mW)}} & \multicolumn{2}{c}{\textbf{Cortex-M4 (80~mW)}} \\
+ & E/Inf ($\mu$J) & E/Round (mJ) & E/Inf ($\mu$J) & E/Round (mJ) \\
+\hline
+Logistic Regression & 0.13 & 0.013 & 0.10 & 0.010 \\
+Neural Network & 9.86 & 0.986 & 6.54 & 0.654 \\
+Gradient Boosting & 3.16 & 0.316 & 2.72 & 0.272 \\
+HistGradient Boosting & 2.45 & 0.245 & 2.14 & 0.214 \\
+Random Forest & 0.77 & 0.077 & 0.66 & 0.066 \\
+Extra Trees & 0.76 & 0.076 & 0.65 & 0.065 \\
+\hline
+\end{tabular}
+\end{table}
+
+\paragraph{Comparison with Communication Energy}
+To contextualize the IDS energy overhead, consider the energy cost of WSN radio communication. For a typical CC2420-class radio transmitting a 100-byte packet over 100 meters at 0~dBm:
+\begin{equation}
+    E_{tx} \approx 50\text{--}100 \text{ }\mu\text{J per packet}
+\end{equation}
+
+The IDS inference overhead as a fraction of communication energy is:
+\begin{equation}
+    \text{IDS overhead ratio} = \frac{E_{inference}}{E_{tx}} \times 100\%
+\end{equation}
+
+For Gradient Boosting on MSP430: $\frac{3.16}{75} \times 100\% \approx 4.2\%$
+
+This confirms that IDS inference contributes minimally to overall energy consumption relative to communication costs.
+
+\paragraph{Battery Lifetime Impact}
+Consider a deployment scenario with the following parameters:
+\begin{itemize}
+    \item Battery capacity: 2000 mAh at 3.3V $\rightarrow$ $E_{battery} = 6600$ mWh = 23,760 J
+    \item LEACH round duration: 20 seconds
+    \item Rounds per hour: $3600/20 = 180$ rounds
+    \item IDS energy per round (Gradient Boosting, MSP430): 0.316 mJ
+\end{itemize}
+
+The IDS power consumption rate is:
+\begin{equation}
+    P_{IDS} = \frac{0.316 \text{ mJ/round} \times 180 \text{ rounds/hour}}{3600 \text{ s/hour}} = 0.0158 \text{ mW}
+\end{equation}
+
+Compared to a typical WSN node average power consumption of 0.5--2 mW (including sleep periods), the IDS contribution is:
+\begin{equation}
+    \text{IDS fraction} = \frac{0.0158}{1.0} \times 100\% \approx 1.6\%
+\end{equation}
+
+This negligible overhead confirms that continuous IDS inference is energetically sustainable for long-term WSN deployment without significant impact on network lifetime.
+
+\subsubsection{Limitations and Validity Considerations}
+
+Several limitations of the latency evaluation methodology must be acknowledged to ensure appropriate interpretation of results.
+
+\paragraph{Lack of Hardware Validation}
+The analytical estimates have not been validated against ground-truth measurements from physical MSP430 or Cortex-M4 platforms. While the methodology provides defensible estimates based on documented processor characteristics, deployment-critical applications would require on-device profiling.
+
+\paragraph{Instruction Set Architecture Differences}
+The empirical measurements are obtained on an x86-64 processor, while target platforms employ ARM (Cortex-M) or MSP430 (16-bit RISC) instruction sets. The mapping between architectures is imprecise, as different ISAs may favor different algorithmic patterns.
+
+\paragraph{Memory Hierarchy Effects}
+The laptop CPU's large cache capacity may mask memory access costs that would be significant on cache-constrained embedded devices. Models with large memory footprints may experience disproportionately higher latency on embedded platforms than analytical estimates suggest.
+
+\paragraph{Implementation Differences}
+The inference code uses general-purpose scikit-learn implementations rather than optimized embedded inference libraries. Production deployments might employ manually optimized routines (e.g., fixed-point arithmetic, loop unrolling) that achieve different performance characteristics.
+
+Despite these limitations, the comparative ranking of model latency is likely preserved across platforms, as fundamental algorithmic complexity differences transcend specific implementations. The large feasibility margins (97--99.99\%) provide confidence that reasonable estimation errors would not change the binary feasibility determination.
+
+\subsubsection{Summary of Latency Findings}
+
+The comprehensive latency evaluation yields the following key findings:
+
+\begin{enumerate}
+    \item \textbf{Universal Deployment Feasibility}: All 24 evaluated model-oversampling combinations satisfy the 100~ms real-time deadline with substantial margin ($>$97\%) on both MSP430 and Cortex-M4 platforms. No model is excluded from deployment consideration based on latency constraints.
+    
+    \item \textbf{Architecture-Dominated Latency}: The choice of classifier architecture (linear, tree-based, neural network) is the primary determinant of inference latency, with up to 76$\times$ difference between fastest (Logistic Regression: 0.036~ms) and slowest (Neural Network: 2.74~ms) models on MSP430. Oversampling strategy has negligible impact on latency ($<$3\% variation within each model type).
+    
+    \item \textbf{Platform-Dependent Speedup}: The ARM Cortex-M4's 6.7$\times$ clock frequency advantage translates to 25--33$\times$ lower latency for compute-intensive models due to superior ALU efficiency and hardware floating-point support. This non-linear speedup is most pronounced for Neural Networks (33$\times$) and least for tree-based models (25$\times$).
+    
+    \item \textbf{Minimal Energy Overhead}: IDS inference contributes less than 2\% to the overall WSN energy budget across all models and platforms. The energy cost ranges from 0.13~$\mu$J (Logistic Regression) to 9.86~$\mu$J (Neural Network) per inference on MSP430, representing 0.2--13\% of typical packet transmission energy.
+    
+    \item \textbf{Recommended Deployment Configuration}: For ultra-low-power deployments on MSP430-class devices, Gradient Boosting offers an optimal balance of classification performance (from prior evaluation) and computational efficiency (0.88~ms latency, 3.16~$\mu$J energy). For mid-range Cortex-M4 platforms, ensemble methods (Random Forest, Extra Trees) become viable at 0.008~ms latency without significant energy penalty, potentially offering improved classification accuracy.
+\end{enumerate}
+
+These results confirm that the classification performance improvements achieved through oversampling strategies do not come at the expense of deployment feasibility, enabling practical IDS implementation in LEACH-based WSN environments. The hybrid empirical-analytical methodology provides a rigorous framework for latency assessment that bridges the gap between algorithm development and embedded deployment planning.
+
+% ============================================================================
+% BIBLIOGRAPHY ENTRIES FOR CYCLE COST REFERENCES
+% ============================================================================
+% Add the following entries to your main bibliography file (.bib):
+%
+% @manual{ti_msp430_userguide,
+%   title = {{MSP430x5xx and MSP430x6xx Family User's Guide}},
+%   author = {{Texas Instruments}},
+%   year = {2023},
+%   note = {Document SLAU208Q},
+%   url = {https://www.ti.com/lit/ug/slau208q/slau208q.pdf}
+% }
+%
+% @techreport{ti_msp430_multiply,
+%   title = {{Software Multiply Routines for the MSP430}},
+%   author = {{Texas Instruments}},
+%   institution = {Texas Instruments},
+%   year = {2013},
+%   note = {Application Report SLAA329},
+%   url = {https://www.ti.com/lit/an/slaa329/slaa329.pdf}
+% }
+%
+% @manual{arm_cortexm4_trm,
+%   title = {{ARM Cortex-M4 Technical Reference Manual}},
+%   author = {{ARM Limited}},
+%   year = {2020},
+%   note = {Document DDI0439D, Revision r0p1},
+%   url = {https://developer.arm.com/documentation/ddi0439/d}
+% }
+%
+% @manual{arm_armv7m_arm,
+%   title = {{ARMv7-M Architecture Reference Manual}},
+%   author = {{ARM Limited}},
+%   year = {2021},
+%   note = {Document DDI0403E.e},
+%   url = {https://developer.arm.com/documentation/ddi0403/ee}
+% }
+%
+% @manual{arm_cortexm4_fpu,
+%   title = {{Cortex-M4 Floating-Point Unit Technical Reference Manual}},
+%   author = {{ARM Limited}},
+%   year = {2012},
+%   note = {Document DDI0439B},
+%   url = {https://developer.arm.com/documentation/ddi0439/b}
+% }
+%
+% @book{hennessy2017computer,
+%   title = {{Computer Architecture: A Quantitative Approach}},
+%   author = {Hennessy, John L. and Patterson, David A.},
+%   year = {2017},
+%   edition = {6th},
+%   publisher = {Morgan Kaufmann},
+%   address = {Cambridge, MA},
+%   isbn = {978-0128119051}
+% }
+%
+% @book{warden2019tinyml,
+%   title = {{TinyML: Machine Learning with TensorFlow Lite on Arduino and Ultra-Low-Power Microcontrollers}},
+%   author = {Warden, Pete and Situnayake, Daniel},
+%   year = {2019},
+%   publisher = {O'Reilly Media},
+%   address = {Sebastopol, CA},
+%   isbn = {978-1492052043}
+% }
+%
+% @inproceedings{banbury2021mlperf,
+%   title = {{MLPerf Tiny Benchmark}},
+%   author = {Banbury, Colby and Reddi, Vijay Janapa and Lam, Max and Fu, William and Faber, Amin and Mattina, Matthew and Whatmough, Paul and others},
+%   booktitle = {Proceedings of the Neural Information Processing Systems Track on Datasets and Benchmarks},
+%   year = {2021},
+%   volume = {1},
+%   pages = {1--14},
+%   url = {https://arxiv.org/abs/2106.07597}
+% }
+%
+% @article{david2021tensorflow,
+%   title = {{TensorFlow Lite Micro: Embedded Machine Learning for TinyML Systems}},
+%   author = {David, Robert and Duke, Jared and Jain, Advait and Janapa Reddi, Vijay and Jeffries, Nat and Li, Jian and Kreeger, Nick and Nappier, Ian and Natraj, Meghna and Wang, Tiezhen and others},
+%   journal = {Proceedings of Machine Learning and Systems},
+%   volume = {3},
+%   pages = {800--811},
+%   year = {2021}
+% }
+% ============================================================================

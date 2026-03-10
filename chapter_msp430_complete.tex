@@ -1,0 +1,431 @@
+% !TEX root = main.tex
+% Bab Evaluasi Latensi Inferensi pada Mikrokontroler MSP430
+% Ditulis dalam Bahasa Indonesia
+
+\section{Evaluasi Latensi Inferensi pada Mikrokontroler MSP430}
+
+Bagian ini menyajikan metodologi dan hasil evaluasi latensi inferensi model deteksi intrusi berbasis \textit{tree ensemble} pada mikrokontroler MSP430F5529. Evaluasi ini bertujuan untuk memvalidasi kelayakan penerapan model \textit{machine learning} yang telah dilatih pada perangkat keras \textit{Wireless Sensor Network} (WSN) dengan sumber daya terbatas.
+
+\subsection{Justifikasi Pemilihan Platform MSP430}
+
+Pemilihan mikrokontroler MSP430 sebagai target evaluasi didasarkan pada beberapa pertimbangan:
+
+\begin{enumerate}
+    \item \textbf{Relevansi dengan Arsitektur LEACH}: Dalam protokol LEACH (\textit{Low-Energy Adaptive Clustering Hierarchy}), setiap node sensor berpotensi menjadi \textit{Cluster Head} (CH) pada setiap putaran. Oleh karena itu, semua node harus memiliki kemampuan komputasi yang memadai untuk menjalankan model IDS. MSP430 merupakan platform yang umum digunakan dalam implementasi LEACH pada penelitian WSN.
+    
+    \item \textbf{Karakteristik Konsumsi Daya Rendah}: MSP430 dirancang khusus untuk aplikasi \textit{ultra-low power}, dengan konsumsi arus aktif 290~$\mu$A/MHz dan mode tidur hingga 1.6~$\mu$A. Karakteristik ini sesuai dengan kebutuhan node sensor yang beroperasi dengan baterai terbatas.
+    
+    \item \textbf{Kapasitas Memori yang Representatif}: Dengan 128~KB \textit{flash} dan 8~KB RAM, MSP430F5529 merepresentasikan kategori mikrokontroler 16-bit yang umum digunakan dalam aplikasi WSN komersial dan penelitian.
+\end{enumerate}
+
+\subsection{Metodologi Evaluasi Latensi Inferensi}
+
+Metodologi evaluasi latensi inferensi terdiri dari empat tahap utama: kuantisasi model, generasi kode C, kompilasi untuk MSP430, dan analisis siklus instruksi.
+
+\subsubsection{Tahap 1: Kuantisasi Model INT8}
+
+Model \textit{tree ensemble} yang dilatih menggunakan \textit{scikit-learn} menggunakan representasi \textit{floating-point} 32-bit untuk nilai \textit{threshold} dan fitur. Untuk deployment pada mikrokontroler 16-bit tanpa FPU (\textit{Floating-Point Unit}), diperlukan kuantisasi ke format bilangan bulat 8-bit (INT8).
+
+\paragraph{Skema Kuantisasi Min-Max}
+Kuantisasi dilakukan menggunakan skema \textit{min-max scaling} per fitur:
+
+\begin{equation}
+    q = \text{round}\left(\frac{x - x_{min}}{x_{max} - x_{min}} \times 255\right)
+\end{equation}
+
+di mana $x$ adalah nilai fitur asli, $x_{min}$ dan $x_{max}$ adalah nilai minimum dan maksimum fitur pada data kalibrasi, dan $q$ adalah nilai terkuantisasi dalam rentang [0, 255].
+
+Untuk setiap fitur $i$, disimpan dua parameter kuantisasi:
+\begin{itemize}
+    \item \textbf{Faktor Skala} ($s_i$): Disimpan sebagai bilangan bulat 16-bit dalam format \textit{fixed-point} Q8.8
+    \item \textbf{Titik Nol} ($z_i$): Disimpan sebagai bilangan bulat 8-bit \textit{unsigned}
+\end{itemize}
+
+Proses kuantisasi pada saat inferensi dilakukan dengan operasi:
+\begin{equation}
+    q_i = \text{clamp}\left(\left\lfloor\frac{x_i \times s_i}{256}\right\rfloor + z_i, 0, 255\right)
+\end{equation}
+
+\paragraph{Kuantisasi Threshold Decision Tree}
+Setiap \textit{threshold} pada node keputusan juga dikuantisasi menggunakan parameter yang sama dengan fitur terkait:
+
+\begin{equation}
+    t_q = \text{round}(t \times s_{f} / 256 + z_{f})
+\end{equation}
+
+di mana $t$ adalah \textit{threshold} asli, $f$ adalah indeks fitur yang digunakan pada node tersebut, dan $t_q$ adalah \textit{threshold} terkuantisasi.
+
+\subsubsection{Tahap 2: Pembatasan Kedalaman Pohon}
+
+Untuk memenuhi batasan memori MSP430 (128~KB \textit{flash}), kedalaman pohon dibatasi pada 6 level. Pembatasan ini memberikan keseimbangan antara kompleksitas model dan penggunaan memori:
+
+\begin{itemize}
+    \item Jumlah node maksimum per pohon: $2^6 - 1 = 63$ node
+    \item Ukuran per node: 6 byte (indeks fitur, \textit{threshold}, \textit{pointer} anak kiri dan kanan)
+    \item Memori per pohon: maksimal $63 \times 6 = 378$ byte
+\end{itemize}
+
+Ekstraksi pohon dilakukan menggunakan \textit{Breadth-First Search} (BFS) dengan penghentian paksa pada kedalaman maksimum. Node yang dipotong pada kedalaman maksimum dikonversi menjadi node daun dengan kelas mayoritas.
+
+\paragraph{Format Node Terkuantisasi}
+Setiap node pohon keputusan direpresentasikan dalam format 6 byte:
+
+\begin{table}[htbp]
+\centering
+\caption{Format Node Pohon Keputusan Terkuantisasi}
+\label{tab:node_format}
+\begin{tabular}{clc}
+\hline
+\textbf{Offset} & \textbf{Field} & \textbf{Ukuran} \\
+\hline
+0 & Indeks fitur (255 = daun) & 1 byte \\
+1 & Threshold / ID kelas & 1 byte \\
+2-3 & Pointer anak kiri & 2 byte \\
+4-5 & Pointer anak kanan & 2 byte \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Tahap 3: Generasi Kode C untuk MSP430}
+
+Proses generasi kode C menghasilkan file-file berikut untuk setiap model:
+
+\begin{enumerate}
+    \item \texttt{model\_config.h}: Definisi konfigurasi model (jumlah pohon, fitur, kelas)
+    \item \texttt{quantization.h}: Parameter kuantisasi (faktor skala dan titik nol)
+    \item \texttt{tree\_data.h}: Data pohon terkuantisasi dalam format array konstan
+    \item \texttt{inference.c/h}: Implementasi fungsi inferensi
+    \item \texttt{main.c}: Program \textit{benchmark} untuk pengukuran waktu
+    \item \texttt{Makefile}: Konfigurasi kompilasi untuk MSP430
+\end{enumerate}
+
+\paragraph{Implementasi Fungsi Inferensi}
+Fungsi inferensi terdiri dari tiga komponen utama:
+
+\begin{enumerate}
+    \item \textbf{Kuantisasi Fitur} (\texttt{quantize\_features}): Mengkonversi 16 fitur \textit{floating-point} ke format UINT8.
+    
+    \item \textbf{Traversal Pohon} (\texttt{tree\_predict}): Menelusuri pohon dari akar ke daun berdasarkan perbandingan fitur dengan \textit{threshold}.
+    
+    \item \textbf{Voting Ensemble} (\texttt{ensemble\_predict}): Mengumpulkan prediksi dari semua pohon dan menentukan kelas mayoritas.
+\end{enumerate}
+
+Pseudocode untuk traversal pohon ditunjukkan pada Algoritma~\ref{alg:tree_predict}.
+
+\begin{algorithm}[htbp]
+\caption{Traversal Pohon Keputusan Terkuantisasi}
+\label{alg:tree_predict}
+\begin{algorithmic}[1]
+\REQUIRE tree\_data: array data node, features: array fitur terkuantisasi
+\ENSURE predicted\_class: kelas hasil prediksi
+\STATE node\_idx $\leftarrow$ 0
+\WHILE{true}
+    \STATE feature\_idx $\leftarrow$ tree\_data[node\_idx $\times$ 6]
+    \STATE threshold $\leftarrow$ tree\_data[node\_idx $\times$ 6 + 1]
+    \IF{feature\_idx = 255}
+        \RETURN threshold \COMMENT{Node daun, threshold berisi ID kelas}
+    \ENDIF
+    \IF{features[feature\_idx] $\leq$ threshold}
+        \STATE node\_idx $\leftarrow$ tree\_data[node\_idx $\times$ 6 + 2:3] \COMMENT{Anak kiri}
+    \ELSE
+        \STATE node\_idx $\leftarrow$ tree\_data[node\_idx $\times$ 6 + 4:5] \COMMENT{Anak kanan}
+    \ENDIF
+\ENDWHILE
+\end{algorithmic}
+\end{algorithm}
+
+\subsubsection{Tahap 4: Kompilasi dan Analisis Siklus}
+
+\paragraph{Kompilasi untuk MSP430}
+Kode C dikompilasi menggunakan \texttt{msp430-elf-gcc} dengan opsi optimisasi \texttt{-O2}:
+
+\begin{verbatim}
+msp430-elf-gcc -mmcu=msp430f5529 -O2 -Wall -c -o inference.o inference.c
+msp430-elf-gcc -mmcu=msp430f5529 -o inference.elf main.o inference.o
+\end{verbatim}
+
+\paragraph{Metodologi Penghitungan Siklus}
+Latensi inferensi dihitung berdasarkan analisis siklus instruksi dari kode hasil kompilasi. Penghitungan menggunakan informasi waktu eksekusi instruksi dari \textit{MSP430x5xx Family User's Guide} (SLAU208Q).
+
+Tabel~\ref{tab:msp430_cycles} menunjukkan jumlah siklus untuk kategori instruksi utama pada MSP430:
+
+\begin{table}[htbp]
+\centering
+\caption{Jumlah Siklus Instruksi MSP430}
+\label{tab:msp430_cycles}
+\begin{tabular}{lcc}
+\hline
+\textbf{Kategori Instruksi} & \textbf{Contoh} & \textbf{Siklus} \\
+\hline
+Operasi register-register & MOV, ADD, CMP & 1 \\
+Operasi dengan memori & MOV @Rn, Rd & 2--3 \\
+Lompatan kondisional & JNE, JZ, JC & 2 \\
+Panggilan fungsi & CALL & 4 \\
+Kembali dari fungsi & RET & 3 \\
+Push/Pop stack & PUSH, POP & 2--3 \\
+\hline
+\end{tabular}
+\end{table}
+
+\paragraph{Model Estimasi Siklus}
+Total siklus inferensi dihitung berdasarkan tiga komponen:
+
+\begin{equation}
+    C_{total} = C_{quant} + C_{trees} + C_{voting}
+\end{equation}
+
+di mana:
+\begin{itemize}
+    \item $C_{quant}$: Siklus untuk kuantisasi fitur
+    \item $C_{trees}$: Siklus untuk traversal semua pohon
+    \item $C_{voting}$: Siklus untuk \textit{voting} dan penentuan kelas
+\end{itemize}
+
+\textbf{Kuantisasi Fitur:}
+Untuk setiap fitur, operasi kuantisasi memerlukan:
+\begin{itemize}
+    \item Load faktor skala dari memori: 3 siklus
+    \item Perkalian: 8 siklus (emulasi software)
+    \item Shift dan penjumlahan: 4 siklus
+    \item Clamping: 6 siklus
+    \item Store hasil: 4 siklus
+\end{itemize}
+
+Total per fitur: $\approx$35 siklus. Untuk 16--18 fitur: $C_{quant} \approx 650$ siklus.
+
+\textbf{Traversal Pohon:}
+Untuk setiap node yang dikunjungi:
+\begin{itemize}
+    \item Load indeks fitur: 3 siklus
+    \item Load threshold: 3 siklus
+    \item Perbandingan: 2 siklus
+    \item Load pointer anak: 4 siklus
+    \item Lompatan kondisional: 2 siklus
+    \item Overhead loop: 3 siklus
+\end{itemize}
+
+Total per node: $\approx$25 siklus. Dengan kedalaman rata-rata 4 node (setengah dari kedalaman maksimum 6), dan overhead panggilan fungsi 10 siklus:
+
+\begin{equation}
+    C_{per\_tree} = 4 \times 25 + 10 = 110 \text{ siklus}
+\end{equation}
+
+\textbf{Voting Ensemble:}
+\begin{itemize}
+    \item Inisialisasi array vote: $n_{classes} \times 2$ siklus
+    \item Increment vote per pohon: $n_{trees} \times 8$ siklus
+    \item Pencarian maksimum: $n_{classes} \times 5$ siklus
+\end{itemize}
+
+\subsection{Spesifikasi Platform Target}
+
+\begin{table}[htbp]
+\centering
+\caption{Spesifikasi Mikrokontroler MSP430F5529}
+\label{tab:msp430_specs_id}
+\begin{tabular}{ll}
+\hline
+\textbf{Parameter} & \textbf{Nilai} \\
+\hline
+Arsitektur & 16-bit RISC \\
+Frekuensi Clock & 25 MHz \\
+Memori Flash & 128 KB \\
+Memori SRAM & 8 KB \\
+Arus Aktif & 290 $\mu$A/MHz \\
+Mode Daya Rendah (LPM3) & 1.6 $\mu$A \\
+Tegangan Operasi & 1.8V -- 3.6V \\
+Peripheral & Timer, UART, SPI, I2C, ADC \\
+Aplikasi Tipikal & Node sensor WSN, LEACH CH \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Hasil Evaluasi Latensi Inferensi}
+
+Evaluasi dilakukan pada empat model \textit{tree ensemble} yang dilatih tanpa \textit{feature engineering} dan tanpa \textit{oversampling}:
+
+\begin{enumerate}
+    \item \textbf{Extra Trees}: 5 pohon dengan kedalaman maksimum 6
+    \item \textbf{Random Forest}: 5 pohon dengan kedalaman maksimum 6
+    \item \textbf{Gradient Boosting}: 20 pohon dengan kedalaman maksimum 6
+    \item \textbf{HistGradient Boosting}: 20 pohon dengan kedalaman maksimum 6
+\end{enumerate}
+
+\subsubsection{Penggunaan Memori}
+
+\begin{table}[htbp]
+\centering
+\caption{Penggunaan Memori pada MSP430F5529}
+\label{tab:msp430_memory_id}
+\begin{tabular}{lcccc}
+\hline
+\textbf{Model} & \textbf{Pohon} & \textbf{Flash (byte)} & \textbf{Flash (\%)} & \textbf{RAM (\%)} \\
+\hline
+Extra Trees & 5 & 10.893 & 8,31\% & 3,76\% \\
+Random Forest & 5 & 10.895 & 8,31\% & 3,76\% \\
+Gradient Boosting & 20 & 20.247 & 15,45\% & 3,76\% \\
+HistGradient Boosting & 20 & 8.335 & 6,36\% & 3,76\% \\
+\hline
+\end{tabular}
+\end{table}
+
+Hasil menunjukkan bahwa semua model dapat dimuat dalam memori flash MSP430F5529 dengan penggunaan kurang dari 20\%. Hal ini menyisakan ruang yang cukup untuk \textit{protocol stack} LEACH, driver radio, dan kode aplikasi lainnya.
+
+\subsubsection{Rincian Jumlah Siklus}
+
+\begin{table}[htbp]
+\centering
+\caption{Rincian Jumlah Siklus per Komponen}
+\label{tab:msp430_cycles_detail}
+\begin{tabular}{lcccc}
+\hline
+\textbf{Komponen} & \textbf{Extra Trees} & \textbf{Random Forest} & \textbf{Gradient} & \textbf{HistGradient} \\
+\hline
+Kuantisasi Fitur & 650 & 650 & 650 & 650 \\
+Traversal Pohon & 550 & 550 & 2.200 & 2.200 \\
+Overhead Ensemble & 70 & 70 & 190 & 190 \\
+\textbf{Total Siklus} & \textbf{1.270} & \textbf{1.270} & \textbf{3.040} & \textbf{3.040} \\
+\hline
+\end{tabular}
+\end{table}
+
+Dari tabel di atas terlihat bahwa:
+\begin{itemize}
+    \item Komponen kuantisasi fitur konstan untuk semua model karena jumlah fitur sama (18 fitur).
+    \item Komponen traversal pohon berbanding lurus dengan jumlah pohon: model dengan 20 pohon memerlukan 4$\times$ siklus dibanding model dengan 5 pohon.
+    \item Overhead ensemble meningkat linear dengan jumlah pohon karena operasi lookup pointer dan increment vote.
+\end{itemize}
+
+\subsubsection{Hasil Waktu Inferensi}
+
+Waktu inferensi dihitung dari jumlah siklus dibagi frekuensi clock 25 MHz:
+
+\begin{equation}
+    t_{inference} = \frac{C_{total}}{f_{clock}} = \frac{C_{total}}{25 \times 10^6} \text{ detik}
+\end{equation}
+
+\begin{table}[htbp]
+\centering
+\caption{Hasil Latensi Inferensi pada MSP430F5529 @ 25 MHz}
+\label{tab:msp430_latency_id}
+\begin{tabular}{lccc}
+\hline
+\textbf{Model} & \textbf{Latensi ($\mu$s)} & \textbf{Latensi (ms)} & \textbf{Throughput (inf/s)} \\
+\hline
+Extra Trees & 50,8 & 0,0508 & 19.685 \\
+Random Forest & 50,8 & 0,0508 & 19.685 \\
+Gradient Boosting & 121,6 & 0,1216 & 8.224 \\
+HistGradient Boosting & 121,6 & 0,1216 & 8.224 \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Estimasi Konsumsi Energi}
+
+Konsumsi energi per inferensi dihitung berdasarkan karakteristik daya MSP430F5529:
+
+\begin{equation}
+    E_{inference} = I_{active} \times V_{supply} \times t_{inference}
+\end{equation}
+
+Dengan arus aktif 290~$\mu$A/MHz pada 25~MHz (total 7,25~mA) dan tegangan 3,3V:
+
+\begin{table}[htbp]
+\centering
+\caption{Konsumsi Energi per Inferensi}
+\label{tab:msp430_energy_id}
+\begin{tabular}{lcc}
+\hline
+\textbf{Model} & \textbf{Waktu ($\mu$s)} & \textbf{Energi ($\mu$J)} \\
+\hline
+Extra Trees & 50,8 & 1,22 \\
+Random Forest & 50,8 & 1,22 \\
+Gradient Boosting & 121,6 & 2,91 \\
+HistGradient Boosting & 121,6 & 2,91 \\
+\hline
+\end{tabular}
+\end{table}
+
+Sebagai perbandingan, transmisi radio menggunakan transceiver CC2420 (umum digunakan dalam WSN) mengkonsumsi sekitar 1~mJ per paket~\cite{polastre2005versatile}. Dengan demikian, energi inferensi hanya mewakili sekitar 0,1--0,3\% dari energi transmisi radio.
+
+\subsection{Analisis dan Pembahasan}
+
+\subsubsection{Kesesuaian dengan Batasan Waktu Protokol LEACH}
+
+Dalam protokol LEACH, setiap putaran terdiri dari:
+\begin{itemize}
+    \item \textbf{Fase Setup} ($\approx$1--2 detik): Pemilihan CH, pembentukan cluster, penjadwalan TDMA
+    \item \textbf{Fase Steady-state} ($\approx$18--19 detik): Pengiriman data dari anggota cluster ke CH
+\end{itemize}
+
+Selama fase \textit{steady-state}, CH menerima data dari 10--20 anggota cluster dengan interval 1--2 detik per anggota. Dalam skenario terburuk dengan 10 paket/detik:
+
+\begin{equation}
+    t_{packet\_interval} = 100 \text{ ms}
+\end{equation}
+
+Rasio margin waktu:
+\begin{equation}
+    \text{Margin} = \frac{t_{packet\_interval}}{t_{inference}} = \frac{100 \text{ ms}}{0,05 \text{ ms}} \approx 2000\times
+\end{equation}
+
+Margin waktu sebesar 2000$\times$ mengindikasikan bahwa sistem IDS dapat beroperasi secara \textit{real-time} tanpa mengganggu operasi normal protokol LEACH.
+
+\subsubsection{Perbandingan antar Model}
+
+\begin{enumerate}
+    \item \textbf{Extra Trees dan Random Forest}: Kedua model menunjukkan performa identik dalam hal latensi (50,8~$\mu$s) dan penggunaan memori ($\approx$11~KB). Keduanya menggunakan 5 pohon dengan struktur serupa. Model-model ini direkomendasikan untuk aplikasi yang mengutamakan latensi minimum.
+    
+    \item \textbf{Gradient Boosting}: Memerlukan waktu inferensi 2,4$\times$ lebih lama (121,6~$\mu$s) karena menggunakan 20 pohon. Penggunaan memori flash tertinggi (20~KB) disebabkan oleh kompleksitas pohon yang lebih besar. Namun, latensi tetap jauh di bawah batasan \textit{real-time}.
+    
+    \item \textbf{HistGradient Boosting}: Meskipun menggunakan 20 pohon seperti Gradient Boosting, penggunaan memori flash jauh lebih kecil (8~KB). Hal ini karena implementasi menggunakan struktur pohon yang lebih sederhana. Model ini cocok untuk skenario dengan batasan memori ketat.
+\end{enumerate}
+
+\subsubsection{Implikasi untuk Deployment WSN}
+
+Hasil evaluasi mengkonfirmasi kelayakan deployment model IDS berbasis \textit{tree ensemble} pada node sensor WSN:
+
+\begin{enumerate}
+    \item \textbf{Efisiensi Memori}: Semua model menggunakan kurang dari 20\% kapasitas flash, menyisakan ruang yang cukup untuk:
+    \begin{itemize}
+        \item Stack protokol LEACH ($\approx$10--15~KB)
+        \item Driver radio CC2420 ($\approx$5~KB)
+        \item Kode aplikasi sensor ($\approx$5--10~KB)
+    \end{itemize}
+    
+    \item \textbf{Kapabilitas Real-time}: Latensi sub-milidetik memungkinkan inspeksi per-paket tanpa buffering, memberikan deteksi ancaman segera.
+    
+    \item \textbf{Efisiensi Energi}: Konsumsi energi inferensi (1--3~$\mu$J) sangat kecil dibanding operasi radio, sehingga tidak berdampak signifikan pada masa pakai baterai.
+    
+    \item \textbf{Oversampling Tidak Diperlukan}: Mengingat model tanpa \textit{oversampling} telah mencapai akurasi 99\%+ pada dataset WSN-DS, kompleksitas tambahan dari teknik \textit{oversampling} tidak memberikan manfaat deployment.
+\end{enumerate}
+
+\subsubsection{Keterbatasan Evaluasi}
+
+Beberapa keterbatasan dari metodologi evaluasi ini perlu diperhatikan:
+
+\begin{enumerate}
+    \item \textbf{Estimasi Siklus Statis}: Penghitungan siklus dilakukan secara statis berdasarkan analisis instruksi, bukan pengukuran langsung pada perangkat keras. Variasi akibat \textit{cache miss} atau \textit{interrupt} tidak diperhitungkan.
+    
+    \item \textbf{Pembatasan Kedalaman Pohon}: Pembatasan kedalaman maksimum 6 level dapat mempengaruhi akurasi model. Evaluasi dampak akurasi dari pembatasan ini tidak termasuk dalam cakupan penelitian ini.
+    
+    \item \textbf{Kuantisasi INT8}: Konversi dari \textit{floating-point} ke INT8 dapat menyebabkan degradasi akurasi. Analisis kuantitatif degradasi akurasi memerlukan evaluasi terpisah.
+\end{enumerate}
+
+\subsection{Kesimpulan Evaluasi MSP430}
+
+Evaluasi latensi inferensi pada mikrokontroler MSP430F5529 menunjukkan bahwa:
+
+\begin{enumerate}
+    \item Model \textit{tree ensemble} terkuantisasi INT8 dapat dieksekusi dengan latensi 50,8--121,6~$\mu$s pada frekuensi 25~MHz.
+    
+    \item Semua model yang dievaluasi memenuhi batasan memori flash 128~KB dengan penggunaan 6--16\%.
+    
+    \item Throughput inferensi (8.000--20.000 inferensi/detik) melebihi kebutuhan tipikal WSN sebesar 100--1000$\times$.
+    
+    \item Konsumsi energi per inferensi (1--3~$\mu$J) dapat diabaikan dibanding energi transmisi radio.
+    
+    \item Deployment IDS berbasis \textit{tree ensemble} pada Cluster Head LEACH layak dilakukan tanpa mengorbankan performa protokol atau masa pakai baterai.
+\end{enumerate}
+
+Temuan ini mendukung kesimpulan bahwa teknik \textit{oversampling} tidak diperlukan untuk mencapai performa deteksi intrusi yang baik pada platform WSN dengan sumber daya terbatas. Model yang dilatih tanpa \textit{oversampling} memberikan akurasi tinggi dengan kompleksitas komputasi yang efisien.

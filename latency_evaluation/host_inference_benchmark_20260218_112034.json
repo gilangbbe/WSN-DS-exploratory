@@ -1,0 +1,456 @@
+{
+  "benchmark_info": {
+    "description": "Inference latency benchmark on host machine",
+    "models": "Conservative SMOTE (no feature engineering)",
+    "dataset": "WSN-DS (test set, 20%)",
+    "timestamp": "2026-02-18T11:20:34.963422",
+    "n_warmup": 100,
+    "n_single_repeat": 5000,
+    "n_batch_repeat": 1000,
+    "batch_sizes": [
+      1,
+      10,
+      100,
+      1000
+    ]
+  },
+  "system_info": {
+    "platform": "macOS-26.3-arm64-arm-64bit",
+    "machine": "arm64",
+    "processor": "arm",
+    "python_version": "3.9.6",
+    "cpu": "Apple M4 Pro",
+    "ram_gb": 24.0,
+    "cores": "10P + 4E",
+    "sklearn_version": "1.6.1",
+    "numpy_version": "2.0.2",
+    "joblib_version": "1.5.1"
+  },
+  "results": [
+    {
+      "model_name": "Extra Trees",
+      "model_info": {
+        "n_estimators": 100,
+        "max_depth": 20,
+        "n_estimators_actual": 100
+      },
+      "quality": {
+        "accuracy": 0.99198952805088,
+        "f1_macro": 0.9512127977705147,
+        "f1_weighted": 0.9921035591557632,
+        "f1_per_class": {
+          "Blackhole": 0.9379941739492301,
+          "Flooding": 0.9431988041853513,
+          "Grayhole": 0.9250561568307126,
+          "Normal": 0.9967999752655093,
+          "TDMA": 0.9530148786217698
+        }
+      },
+      "single_sample": {
+        "n_repeat": 5000,
+        "mean_us": 13941.971535000002,
+        "median_us": 14126.9375,
+        "std_us": 1114.6001347819702,
+        "min_us": 11455.042,
+        "max_us": 35879.167,
+        "p5_us": 12398.6479,
+        "p25_us": 13966.49975,
+        "p75_us": 14207.33325,
+        "p95_us": 14304.417,
+        "p99_us": 14432.61217
+      },
+      "batch_results": {
+        "1": {
+          "batch_size": 1,
+          "n_repeat": 1000,
+          "total_mean_us": 13893.886603999998,
+          "total_median_us": 14115.104,
+          "per_sample_mean_us": 13893.886603999998,
+          "per_sample_median_us": 14115.104,
+          "throughput_per_sec": 71.97410116418423
+        },
+        "10": {
+          "batch_size": 10,
+          "n_repeat": 100,
+          "total_mean_us": 14136.959589999999,
+          "total_median_us": 14132.813,
+          "per_sample_mean_us": 1413.695959,
+          "per_sample_median_us": 1413.2813,
+          "throughput_per_sec": 707.3656776294146
+        },
+        "100": {
+          "batch_size": 100,
+          "n_repeat": 100,
+          "total_mean_us": 13529.85121,
+          "total_median_us": 13832.188,
+          "per_sample_mean_us": 135.2985121,
+          "per_sample_median_us": 138.32188,
+          "throughput_per_sec": 7391.064280595292
+        },
+        "1000": {
+          "batch_size": 1000,
+          "n_repeat": 100,
+          "total_mean_us": 13967.595050000002,
+          "total_median_us": 14021.7085,
+          "per_sample_mean_us": 13.967595050000002,
+          "per_sample_median_us": 14.021708499999999,
+          "throughput_per_sec": 71594.28637645103
+        }
+      },
+      "mlflow_registry": "WSN_IDS_NoFE_Extra_Trees_Conservative_SMOTE"
+    },
+    {
+      "model_name": "Random Forest",
+      "model_info": {
+        "n_estimators": 100,
+        "max_depth": 20,
+        "n_estimators_actual": 100
+      },
+      "quality": {
+        "accuracy": 0.9976808047465248,
+        "f1_macro": 0.9846838001431024,
+        "f1_weighted": 0.9976861967908305,
+        "f1_per_class": {
+          "Blackhole": 0.9942604856512142,
+          "Flooding": 0.9670498084291188,
+          "Grayhole": 0.988666804038739,
+          "Normal": 0.9988424496851463,
+          "TDMA": 0.9745994529112935
+        }
+      },
+      "single_sample": {
+        "n_repeat": 5000,
+        "mean_us": 13964.8422752,
+        "median_us": 14124.6875,
+        "std_us": 1102.1107039181486,
+        "min_us": 11452.333,
+        "max_us": 36278.375,
+        "p5_us": 12479.623249999999,
+        "p25_us": 13985.4065,
+        "p75_us": 14202.385750000001,
+        "p95_us": 14298.545199999999,
+        "p99_us": 14440.21425
+      },
+      "batch_results": {
+        "1": {
+          "batch_size": 1,
+          "n_repeat": 1000,
+          "total_mean_us": 14117.74409,
+          "total_median_us": 14148.229,
+          "per_sample_mean_us": 14117.74409,
+          "per_sample_median_us": 14148.229,
+          "throughput_per_sec": 70.832846496228
+        },
+        "10": {
+          "batch_size": 10,
+          "n_repeat": 100,
+          "total_mean_us": 14091.117530000003,
+          "total_median_us": 14149.396,
+          "per_sample_mean_us": 1409.1117530000001,
+          "per_sample_median_us": 1414.9396000000002,
+          "throughput_per_sec": 709.666921641239
+        },
+        "100": {
+          "batch_size": 100,
+          "n_repeat": 100,
+          "total_mean_us": 13321.325389999998,
+          "total_median_us": 13175.479,
+          "per_sample_mean_us": 133.21325389999998,
+          "per_sample_median_us": 131.75479,
+          "throughput_per_sec": 7506.76055665359
+        },
+        "1000": {
+          "batch_size": 1000,
+          "n_repeat": 100,
+          "total_mean_us": 14094.28464,
+          "total_median_us": 14046.8955,
+          "per_sample_mean_us": 14.094284640000001,
+          "per_sample_median_us": 14.046895500000002,
+          "throughput_per_sec": 70950.74532282185
+        }
+      },
+      "mlflow_registry": "WSN_IDS_NoFE_Random_Forest_Conservative_SMOTE"
+    },
+    {
+      "model_name": "Gradient Boosting",
+      "model_info": {
+        "n_estimators": 100,
+        "max_depth": 10,
+        "n_estimators_actual": 100
+      },
+      "quality": {
+        "accuracy": 0.9991178521121751,
+        "f1_macro": 0.9942999077523726,
+        "f1_weighted": 0.9991168386678925,
+        "f1_per_class": {
+          "Blackhole": 0.9973427812223207,
+          "Flooding": 0.9905511811023622,
+          "Grayhole": 0.9960670668598633,
+          "Normal": 0.9995680012342821,
+          "TDMA": 0.9879705083430346
+        }
+      },
+      "single_sample": {
+        "n_repeat": 5000,
+        "mean_us": 308.38664819999997,
+        "median_us": 308.125,
+        "std_us": 15.771303265781073,
+        "min_us": 287.459,
+        "max_us": 744.084,
+        "p5_us": 291.5,
+        "p25_us": 298.084,
+        "p75_us": 314.667,
+        "p95_us": 326.37705,
+        "p99_us": 350.6693400000001
+      },
+      "batch_results": {
+        "1": {
+          "batch_size": 1,
+          "n_repeat": 1000,
+          "total_mean_us": 306.86708999999996,
+          "total_median_us": 307.6875,
+          "per_sample_mean_us": 306.86708999999996,
+          "per_sample_median_us": 307.6875,
+          "throughput_per_sec": 3258.7398016515886
+        },
+        "10": {
+          "batch_size": 10,
+          "n_repeat": 100,
+          "total_mean_us": 394.06332,
+          "total_median_us": 387.625,
+          "per_sample_mean_us": 39.406332000000006,
+          "per_sample_median_us": 38.7625,
+          "throughput_per_sec": 25376.632364565165
+        },
+        "100": {
+          "batch_size": 100,
+          "n_repeat": 100,
+          "total_mean_us": 1901.3112799999997,
+          "total_median_us": 1896.3955,
+          "per_sample_mean_us": 19.013112800000002,
+          "per_sample_median_us": 18.963955,
+          "throughput_per_sec": 52595.28045297243
+        },
+        "1000": {
+          "batch_size": 1000,
+          "n_repeat": 100,
+          "total_mean_us": 12476.21754,
+          "total_median_us": 12453.1665,
+          "per_sample_mean_us": 12.476217540000002,
+          "per_sample_median_us": 12.453166499999998,
+          "throughput_per_sec": 80152.49788598988
+        }
+      },
+      "mlflow_registry": "WSN_IDS_NoFE_Gradient_Boosting_Conservative_SMOTE"
+    },
+    {
+      "model_name": "HistGradient Boosting",
+      "model_info": {
+        "max_depth": 15,
+        "n_iterations": 66,
+        "n_trees_per_iteration": 5,
+        "n_trees_total": 330
+      },
+      "quality": {
+        "accuracy": 0.9955323477939189,
+        "f1_macro": 0.972038602019395,
+        "f1_weighted": 0.9955547312707151,
+        "f1_per_class": {
+          "Blackhole": 0.9868305531167691,
+          "Flooding": 0.9625668449197861,
+          "Grayhole": 0.9826589595375722,
+          "Normal": 0.997815059873536,
+          "TDMA": 0.9303215926493109
+        }
+      },
+      "single_sample": {
+        "n_repeat": 5000,
+        "mean_us": 8495.069161200001,
+        "median_us": 8303.354,
+        "std_us": 1854.3625855930923,
+        "min_us": 6498.875,
+        "max_us": 92696.292,
+        "p5_us": 7468.314249999999,
+        "p25_us": 7954.99,
+        "p75_us": 8680.06225,
+        "p95_us": 9422.7542,
+        "p99_us": 15266.420420000026
+      },
+      "batch_results": {
+        "1": {
+          "batch_size": 1,
+          "n_repeat": 1000,
+          "total_mean_us": 8629.81184,
+          "total_median_us": 8341.6875,
+          "per_sample_mean_us": 8629.81184,
+          "per_sample_median_us": 8341.6875,
+          "throughput_per_sec": 115.87738163245979
+        },
+        "10": {
+          "batch_size": 10,
+          "n_repeat": 100,
+          "total_mean_us": 8331.80415,
+          "total_median_us": 8064.021000000001,
+          "per_sample_mean_us": 833.180415,
+          "per_sample_median_us": 806.4021,
+          "throughput_per_sec": 1200.220242814997
+        },
+        "100": {
+          "batch_size": 100,
+          "n_repeat": 100,
+          "total_mean_us": 8292.10129,
+          "total_median_us": 8184.021000000001,
+          "per_sample_mean_us": 82.92101290000001,
+          "per_sample_median_us": 81.84021,
+          "throughput_per_sec": 12059.669377241771
+        },
+        "1000": {
+          "batch_size": 1000,
+          "n_repeat": 100,
+          "total_mean_us": 10155.570880000001,
+          "total_median_us": 9184.75,
+          "per_sample_mean_us": 10.155570879999999,
+          "per_sample_median_us": 9.18475,
+          "throughput_per_sec": 98468.12274919597
+        }
+      },
+      "mlflow_registry": "WSN_IDS_NoFE_HistGradient_Boosting_Conservative_SMOTE"
+    },
+    {
+      "model_name": "Logistic Regression",
+      "model_info": {},
+      "quality": {
+        "accuracy": 0.9643441515017857,
+        "f1_macro": 0.8392178683504723,
+        "f1_weighted": 0.9676145927485805,
+        "f1_per_class": {
+          "Blackhole": 0.7588532883642496,
+          "Flooding": 0.9333333333333333,
+          "Grayhole": 0.5982783357245337,
+          "Normal": 0.9862940951369419,
+          "TDMA": 0.9193302891933028
+        }
+      },
+      "single_sample": {
+        "n_repeat": 5000,
+        "mean_us": 35.4685042,
+        "median_us": 35.25,
+        "std_us": 3.000445586705808,
+        "min_us": 32.917,
+        "max_us": 118.208,
+        "p5_us": 34.667,
+        "p25_us": 35.083,
+        "p75_us": 35.417,
+        "p95_us": 36.085100000000004,
+        "p99_us": 40.166840000000015
+      },
+      "batch_results": {
+        "1": {
+          "batch_size": 1,
+          "n_repeat": 1000,
+          "total_mean_us": 34.071248000000004,
+          "total_median_us": 33.5835,
+          "per_sample_mean_us": 34.071248000000004,
+          "per_sample_median_us": 33.5835,
+          "throughput_per_sec": 29350.26037202981
+        },
+        "10": {
+          "batch_size": 10,
+          "n_repeat": 100,
+          "total_mean_us": 34.216210000000004,
+          "total_median_us": 34.0,
+          "per_sample_mean_us": 3.421621,
+          "per_sample_median_us": 3.4,
+          "throughput_per_sec": 292259.13682432973
+        },
+        "100": {
+          "batch_size": 100,
+          "n_repeat": 100,
+          "total_mean_us": 41.751189999999994,
+          "total_median_us": 39.0,
+          "per_sample_mean_us": 0.41751189999999994,
+          "per_sample_median_us": 0.39,
+          "throughput_per_sec": 2395141.312139846
+        },
+        "1000": {
+          "batch_size": 1000,
+          "n_repeat": 100,
+          "total_mean_us": 61.82549999999999,
+          "total_median_us": 59.4585,
+          "per_sample_mean_us": 0.06182550000000002,
+          "per_sample_median_us": 0.0594585,
+          "throughput_per_sec": 16174555.806261165
+        }
+      },
+      "mlflow_registry": "WSN_IDS_NoFE_Logistic_Regression_Conservative_SMOTE"
+    },
+    {
+      "model_name": "Neural Network",
+      "model_info": {},
+      "quality": {
+        "accuracy": 0.9955181196021797,
+        "f1_macro": 0.96619869199868,
+        "f1_weighted": 0.9955239130492627,
+        "f1_per_class": {
+          "Blackhole": 0.9571614019904803,
+          "Flooding": 0.9473684210526315,
+          "Grayhole": 0.970625262274444,
+          "Normal": 0.9983493003810493,
+          "TDMA": 0.9574890742947954
+        }
+      },
+      "single_sample": {
+        "n_repeat": 5000,
+        "mean_us": 55.2401936,
+        "median_us": 54.333,
+        "std_us": 4.709645797012662,
+        "min_us": 53.0,
+        "max_us": 261.416,
+        "p5_us": 53.583,
+        "p25_us": 54.042,
+        "p75_us": 55.0,
+        "p95_us": 60.125,
+        "p99_us": 64.75041
+      },
+      "batch_results": {
+        "1": {
+          "batch_size": 1,
+          "n_repeat": 1000,
+          "total_mean_us": 55.034584,
+          "total_median_us": 53.875,
+          "per_sample_mean_us": 55.034584,
+          "per_sample_median_us": 53.875,
+          "throughput_per_sec": 18170.392638926824
+        },
+        "10": {
+          "batch_size": 10,
+          "n_repeat": 100,
+          "total_mean_us": 63.262919999999994,
+          "total_median_us": 59.0415,
+          "per_sample_mean_us": 6.326292,
+          "per_sample_median_us": 5.90415,
+          "throughput_per_sec": 158070.47793557428
+        },
+        "100": {
+          "batch_size": 100,
+          "n_repeat": 100,
+          "total_mean_us": 94.36410999999998,
+          "total_median_us": 86.188,
+          "per_sample_mean_us": 0.9436411000000001,
+          "per_sample_median_us": 0.86188,
+          "throughput_per_sec": 1059724.931438446
+        },
+        "1000": {
+          "batch_size": 1000,
+          "n_repeat": 100,
+          "total_mean_us": 265.81831,
+          "total_median_us": 263.10400000000004,
+          "per_sample_mean_us": 0.26581831,
+          "per_sample_median_us": 0.263104,
+          "throughput_per_sec": 3761968.0901590264
+        }
+      },
+      "mlflow_registry": "WSN_IDS_NoFE_Neural_Network_Conservative_SMOTE"
+    }
+  ]
+}

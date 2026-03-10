@@ -1,0 +1,66 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="WSN-DS Pipeline">
+    <mxGraphModel dx="946" dy="618" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Dataset -->
+        <mxCell id="2" value="WSN-DS Dataset&#10;(374.661 sampel, 19 fitur)" style="shape=cylinder;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="260" y="20" width="300" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- Data preprocessing -->
+        <mxCell id="3" value="Data preprocessing" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="310" y="130" width="200" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Oversampling -->
+        <mxCell id="4" value="Oversampling" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="310" y="210" width="200" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Model Training -->
+        <mxCell id="5" value="Model Training" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="310" y="290" width="200" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Evaluasi kualitas data -->
+        <mxCell id="6" value="Evaluasi Kualitas Data Sintetis dan&#10;Performa Model" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="260" y="370" width="300" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Analisis Komparatif -->
+        <mxCell id="7" value="Analisis Komparatif" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="310" y="460" width="200" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Evaluasi Waktu Inferensi -->
+        <mxCell id="8" value="Evaluasi Waktu Inferensi" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="310" y="540" width="200" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrows -->
+        <mxCell id="9" style="endArrow=block;html=1;" edge="1" parent="1" source="2" target="3">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="10" style="endArrow=block;html=1;" edge="1" parent="1" source="3" target="4">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="11" style="endArrow=block;html=1;" edge="1" parent="1" source="4" target="5">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="12" style="endArrow=block;html=1;" edge="1" parent="1" source="5" target="6">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="13" style="endArrow=block;html=1;" edge="1" parent="1" source="6" target="7">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="14" style="endArrow=block;html=1;" edge="1" parent="1" source="7" target="8">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

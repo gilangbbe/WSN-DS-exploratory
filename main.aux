@@ -1,0 +1,69 @@
+\relax 
+\abx@aux@refcontext{apa/global//global/global/global}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Results and Explanation}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}Evaluasi Latensi Inferensi pada ARM Cortex-M4F}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Justifikasi Pemilihan Platform ARM Cortex-M4F}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Spesifikasi Platform Target}{2}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Spesifikasi Mikrokontroler nRF52840 (ARM Cortex-M4F)}}{2}{}\protected@file@percent }
+\newlabel{tab:nrf52840_specs}{{1}{2}{}{table.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Metodologi Evaluasi Latensi Inferensi}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.1}Tahap 1: Ekstraksi Model dari MLflow}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.2}Tahap 2: Pra-pemrosesan StandardScaler}{3}{}\protected@file@percent }
+\newlabel{subsec:standardscaler}{{2.3.2}{3}{}{subsubsection.2.3.2}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.3}Tahap 3: Representasi Data Tanpa Kuantisasi}{3}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Format Node Pohon Keputusan Float32 pada ARM Cortex-M4F}}{3}{}\protected@file@percent }
+\newlabel{tab:arm_node_format}{{2}{3}{}{table.2}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.4}Tahap 4: Optimasi Kedalaman Pohon dan Pencarian Konfigurasi}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Strategi Pencarian}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Hasil Pencarian Konfigurasi}{5}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Konfigurasi Optimal Terpilih untuk Setiap Model}}{5}{}\protected@file@percent }
+\newlabel{tab:depth_search_results}{{3}{5}{}{table.3}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Eksplorasi Pencarian Konfigurasi: Pengaruh Kedalaman dan Jumlah \textit  {Stage} terhadap Kualitas}}{6}{}\protected@file@percent }
+\newlabel{tab:depth_search_exploration}{{4}{6}{}{table.4}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.5}Tahap 5: Evaluasi Kualitas Model}{6}{}\protected@file@percent }
+\newlabel{subsec:quality_eval}{{2.3.5}{6}{}{subsubsection.2.3.5}{}}
+\@writefile{toc}{\contentsline {paragraph}{Metodologi Evaluasi Kualitas}{7}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Perbandingan Kualitas Model: Asli vs.\ ARM-Optimized (Conservative SMOTE)}}{7}{}\protected@file@percent }
+\newlabel{tab:quality_comparison}{{5}{7}{}{table.5}{}}
+\@writefile{toc}{\contentsline {paragraph}{Hasil Evaluasi Kualitas}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Analisis Hasil Kualitas}{7}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Skor $F1$ per Kelas: Asli vs.\ ARM-Optimized}}{8}{}\protected@file@percent }
+\newlabel{tab:per_class_f1}{{6}{8}{}{table.6}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.6}Tahap 6: Generasi Kode C untuk ARM Cortex-M4F}{9}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Dua Varian Inferensi}{9}{}\protected@file@percent }
+\@writefile{loa}{\contentsline {algorithm}{\numberline {1}{\ignorespaces Traversal Pohon Keputusan Float32 pada ARM Cortex-M4F}}{10}{}\protected@file@percent }
+\newlabel{alg:arm_tree_predict}{{1}{10}{}{algorithm.1}{}}
+\@writefile{loa}{\contentsline {algorithm}{\numberline {2}{\ignorespaces Inferensi Ensemble (Varian Voting dan Scoring)}}{10}{}\protected@file@percent }
+\newlabel{alg:arm_ensemble}{{2}{10}{}{algorithm.2}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.7}Tahap 7: Kompilasi dan Analisis Siklus}{11}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Kompilasi untuk ARM Cortex-M4F}{11}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Analisis Disassembly dan Estimasi Siklus}{11}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces Pemetaan Instruksi \textit  {Inner Loop} ke Siklus ARM Cortex-M4}}{12}{}\protected@file@percent }
+\newlabel{tab:arm_cycles}{{7}{12}{}{table.7}{}}
+\@writefile{toc}{\contentsline {paragraph}{Model Estimasi Siklus Total}{15}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.4}Hasil Evaluasi Latensi Inferensi}{15}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.4.1}Penggunaan Memori}{15}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces Penggunaan Memori pada nRF52840 (1~MB Flash)}}{16}{}\protected@file@percent }
+\newlabel{tab:arm_memory}{{8}{16}{}{table.8}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.4.2}Rincian Jumlah Siklus}{16}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces Rincian Jumlah Siklus per Komponen pada ARM Cortex-M4F}}{16}{}\protected@file@percent }
+\newlabel{tab:arm_cycles_detail}{{9}{16}{}{table.9}{}}
+\@writefile{toc}{\contentsline {paragraph}{Contoh Perhitungan Rinci}{17}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.4.3}Hasil Waktu Inferensi}{18}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces Hasil Latensi Inferensi pada nRF52840 @ 64 MHz}}{19}{}\protected@file@percent }
+\newlabel{tab:arm_latency}{{10}{19}{}{table.10}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.4.4}Estimasi Konsumsi Energi}{19}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {11}{\ignorespaces Konsumsi Energi per Inferensi pada nRF52840}}{19}{}\protected@file@percent }
+\newlabel{tab:arm_energy}{{11}{19}{}{table.11}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.5}Analisis dan Pembahasan}{19}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.5.1}Kesesuaian dengan Batasan Waktu Protokol LEACH}{19}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.5.2}Perbandingan antar Model}{20}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.5.3}Superioritas Model Boosting untuk Deployment Terbatas Memori}{21}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.5.4}Keunggulan Pendekatan Float32 Native}{21}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.5.5}Implikasi untuk Deployment WSN}{22}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.5.6}Keterbatasan Evaluasi}{23}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.6}Ringkasan Evaluasi ARM Cortex-M4F}{23}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {12}{\ignorespaces Ringkasan Evaluasi Deployment pada nRF52840 ARM Cortex-M4F (Conservative SMOTE)}}{24}{}\protected@file@percent }
+\newlabel{tab:arm_summary}{{12}{24}{}{table.12}{}}
+\abx@aux@read@bbl@mdfivesum{nobblfile}
+\gdef \@abspage@last{24}

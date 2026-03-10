@@ -1,0 +1,5 @@
+Model,Trees,MaxDepth,Features,QuantCycles,TreeCycles,OverheadCycles,TotalCycles,TimeUs,TimeMs,InferencesPerSec,FlashBytes,FlashPct,RamBytes,RamPct
+extra_trees_no_oversampling,5,6,16,500,600,89,1189,74.31,0.0743,13456.7,7236,22.1,730,35.6
+random_forest_no_oversampling,5,6,16,500,600,89,1189,74.31,0.0743,13456.7,7238,22.1,732,35.7
+gradient_boosting_no_oversampling,20,6,16,500,2400,239,3139,196.19,0.1962,5097.2,9730,29.7,736,35.9
+histgradient_boosting_no_oversampling,20,6,16,500,2400,239,3139,196.19,0.1962,5097.2,6398,19.5,740,36.1

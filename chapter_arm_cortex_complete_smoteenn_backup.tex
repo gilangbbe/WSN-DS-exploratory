@@ -1,0 +1,572 @@
+% !TEX root = main.tex
+% Bab Evaluasi Latensi Inferensi pada ARM Cortex-M4F (nRF52840)
+% Ditulis dalam Bahasa Indonesia
+
+\section{Evaluasi Latensi Inferensi pada ARM Cortex-M4F}
+
+Bagian ini menyajikan metodologi dan hasil evaluasi latensi inferensi model deteksi intrusi berbasis \textit{tree ensemble} pada mikrokontroler ARM Cortex-M4F. Berbeda dengan pendekatan kuantisasi INT8 pada mikrokontroler 16-bit, evaluasi ini menggunakan representasi \textit{floating-point} 32-bit secara native dengan memanfaatkan \textit{Floating-Point Unit} (FPU) perangkat keras yang tersedia pada arsitektur Cortex-M4F. Model yang dievaluasi telah dilatih menggunakan teknik \textit{oversampling} SMOTE-ENN tanpa \textit{feature engineering}.
+
+\subsection{Justifikasi Pemilihan Platform ARM Cortex-M4F}
+
+Pemilihan mikrokontroler berbasis ARM Cortex-M4F sebagai target evaluasi didasarkan pada beberapa pertimbangan utama:
+
+\begin{enumerate}
+    \item \textbf{Dukungan \textit{Floating-Point} Perangkat Keras}: Arsitektur Cortex-M4F dilengkapi FPU yang mendukung operasi \textit{single-precision} (32-bit) sesuai standar IEEE 754. Hal ini memungkinkan eksekusi model \textit{machine learning} tanpa kuantisasi, sehingga menghilangkan risiko degradasi akurasi akibat konversi tipe data.
+
+    \item \textbf{Relevansi dengan Arsitektur LEACH}: Dalam protokol LEACH (\textit{Low-Energy Adaptive Clustering Hierarchy}), setiap node sensor berpotensi menjadi \textit{Cluster Head} (CH). Platform nRF52840, yang menggunakan prosesor Cortex-M4F, telah digunakan secara luas dalam implementasi WSN karena memiliki radio IEEE 802.15.4 terintegrasi yang kompatibel dengan protokol komunikasi sensor.
+
+    \item \textbf{Kapasitas Memori yang Memadai}: Dengan 1~MB \textit{flash} dan 256~KB RAM, nRF52840 menyediakan ruang yang cukup untuk menyimpan model \textit{tree ensemble} berskala besar tanpa memerlukan kompresi atau pembatasan yang agresif.
+
+    \item \textbf{Efisiensi Energi}: Arsitektur ARM Cortex-M4F dirancang untuk konsumsi daya rendah dengan mode \textit{sleep} hingga 1,9~$\mu$A, menjadikannya cocok untuk node sensor yang beroperasi dengan baterai terbatas.
+\end{enumerate}
+
+\subsection{Spesifikasi Platform Target}
+
+\begin{table}[htbp]
+\centering
+\caption{Spesifikasi Mikrokontroler nRF52840 (ARM Cortex-M4F)}
+\label{tab:nrf52840_specs}
+\begin{tabular}{ll}
+\hline
+\textbf{Parameter} & \textbf{Nilai} \\
+\hline
+Arsitektur & 32-bit ARM Cortex-M4F \\
+Set Instruksi & ARMv7E-M + Thumb-2 \\
+\textit{Floating-Point Unit} & FPv4-SP-D16 (single-precision) \\
+Frekuensi Clock & 64 MHz \\
+Memori Flash & 1 MB \\
+Memori SRAM & 256 KB \\
+Radio Terintegrasi & IEEE 802.15.4, Bluetooth 5.0 \\
+Arus Aktif & 4,8 mA @ 64 MHz (3,0V) \\
+Mode Daya Rendah & 1,9 $\mu$A (System ON, RAM retention) \\
+Tegangan Operasi & 1,7V -- 5,5V \\
+Peripheral & Timer, UART, SPI, I2C, ADC, QSPI \\
+Aplikasi Tipikal & Node sensor IoT/WSN, \textit{edge computing} \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Metodologi Evaluasi Latensi Inferensi}
+
+Metodologi evaluasi terdiri dari lima tahap utama: ekstraksi model, optimasi kedalaman pohon, evaluasi kualitas model, generasi kode C, dan analisis siklus instruksi. Seluruh proses diimplementasikan dalam \textit{pipeline} terotomasi menggunakan Python dan \textit{cross-compiler} \texttt{arm-none-eabi-gcc}.
+
+\subsubsection{Tahap 1: Ekstraksi Model dari MLflow}
+
+Model \textit{tree ensemble} yang dilatih menggunakan \textit{scikit-learn} diekstrak dari artefak MLflow. Empat model dievaluasi, semuanya dilatih dengan teknik \textit{oversampling} SMOTE-ENN tanpa \textit{feature engineering}:
+
+\begin{enumerate}
+    \item \textbf{Random Forest} (RF): 100 \textit{estimator}, kedalaman maksimum 20
+    \item \textbf{Extra Trees} (ET): 100 \textit{estimator}, kedalaman maksimum 20
+    \item \textbf{Gradient Boosting} (GB): 100 \textit{estimator}, kedalaman maksimum 10, $\eta = 0{,}1$
+    \item \textbf{Histogram Gradient Boosting} (HistGB): 62 iterasi (otomatis), kedalaman maksimum 15, $\eta = 0{,}1$
+\end{enumerate}
+
+Setiap pohon keputusan diekstrak menggunakan metode \textit{Breadth-First Search} (BFS) untuk menghasilkan representasi array datar (\textit{flat array}) yang efisien untuk eksekusi pada mikrokontroler. Berbeda dengan pendekatan kuantisasi, seluruh nilai \textit{threshold} dipertahankan dalam format \textit{float32} asli.
+
+\subsubsection{Tahap 2: Representasi Data Tanpa Kuantisasi}
+
+Keuntungan utama penggunaan ARM Cortex-M4F adalah kemampuan untuk mempertahankan representasi \textit{floating-point} asli dari model. Setiap node pohon keputusan direpresentasikan dalam format 12 byte yang disejajarkan (\textit{aligned}):
+
+\begin{table}[htbp]
+\centering
+\caption{Format Node Pohon Keputusan Float32 pada ARM Cortex-M4F}
+\label{tab:arm_node_format}
+\begin{tabular}{clcl}
+\hline
+\textbf{Offset} & \textbf{Field} & \textbf{Ukuran} & \textbf{Keterangan} \\
+\hline
+0--3 & \texttt{threshold} & 4 byte & \textit{float32}, nilai batas / ID kelas \\
+4--5 & \texttt{feature\_idx} & 2 byte & \textit{uint16}, 0xFFFF = node daun \\
+6--7 & \texttt{left\_child} & 2 byte & \textit{uint16}, indeks anak kiri \\
+8--9 & \texttt{right\_child} & 2 byte & \textit{uint16}, indeks anak kanan \\
+10--11 & \texttt{padding} & 2 byte & penyejajaran ke 4 byte \\
+\hline
+\end{tabular}
+\end{table}
+
+Format 12 byte ini memberikan beberapa keunggulan dibanding format INT8 6 byte pada mikrokontroler 16-bit:
+\begin{itemize}
+    \item \textbf{Tanpa \textit{Error} Kuantisasi}: Tidak ada degradasi akurasi akibat konversi tipe data.
+    \item \textbf{Tanpa Overhead Kuantisasi}: Operasi kuantisasi fitur pada saat inferensi tidak diperlukan, menghemat sekitar 650 siklus.
+    \item \textbf{Akses Memori Tersejajarkan}: Ukuran 12 byte (kelipatan 4) memastikan akses memori yang efisien pada arsitektur 32-bit.
+    \item \textbf{Perbandingan FPU Native}: Instruksi \texttt{VCMPE.F32} melakukan perbandingan \textit{floating-point} dalam 1 siklus clock.
+\end{itemize}
+
+\subsubsection{Tahap 3: Optimasi Kedalaman Pohon dan Pencarian Konfigurasi}
+
+Meskipun nRF52840 memiliki 1~MB \textit{flash}, model \textit{tree ensemble} berukuran besar tetap memerlukan optimasi untuk menyisakan ruang bagi \textit{protocol stack} dan kode aplikasi. Anggaran memori flash ditetapkan sebesar 800~KB ($\approx$78\% dari total), menyisakan ruang untuk:
+
+\begin{itemize}
+    \item Stack protokol LEACH dan MAC 802.15.4 ($\approx$50--80~KB)
+    \item Driver radio dan HAL ($\approx$40~KB)
+    \item Kode aplikasi sensor dan \textit{buffer} ($\approx$30--50~KB)
+\end{itemize}
+
+\paragraph{Pencarian Kedalaman Optimal}
+Untuk model Random Forest dan Extra Trees, dilakukan pencarian kedalaman optimal dari himpunan $D = \{6, 8, 10, 12, 15, 20, 255\}$ (255 berarti tanpa batas). Untuk model \textit{boosting} (GB dan HistGB), pencarian juga mencakup variasi jumlah \textit{stage} dari himpunan $S = \{10, 20, 50, N_{max}\}$ karena model \textit{boosting} multi-kelas menghasilkan $N_{stage} \times N_{kelas}$ pohon.
+
+Kriteria pemilihan konfigurasi optimal menggunakan prinsip \textit{fidelity} tertinggi:
+\begin{equation}
+    \text{config}^{*} = \argmin_{c \in \mathcal{C}_{fit}} |\Delta F1_c|
+    \quad \text{di mana} \quad
+    \mathcal{C}_{fit} = \{c : M_c \leq 800 \text{ KB}\}
+\end{equation}
+
+dengan $\Delta F1_c = F1_{ARM,c} - F1_{original}$ dan $M_c$ adalah ukuran memori konfigurasi $c$. Konfigurasi yang menghasilkan perubahan $\Delta F1 \geq -0{,}01$ dinyatakan memenuhi syarat kualitas.
+
+\paragraph{Hasil Pencarian Konfigurasi}
+Tabel~\ref{tab:depth_search_results} menunjukkan ringkasan hasil pencarian konfigurasi optimal untuk setiap model:
+
+\begin{table}[htbp]
+\centering
+\caption{Hasil Pencarian Konfigurasi Optimal}
+\label{tab:depth_search_results}
+\begin{tabular}{lccccc}
+\hline
+\textbf{Model} & \textbf{Kedalaman} & \textbf{\textit{Stages}} & \textbf{Pohon} & \textbf{Node} & \textbf{Memori (KB)} \\
+\hline
+Extra Trees & 6 & -- & 100 & 8.138 & 96,3 \\
+Random Forest & 6 & -- & 100 & 8.060 & 95,4 \\
+Gradient Boosting & 6 & 10 & 50 & 5.864 & 69,3 \\
+HistGradient Boosting & 10 & 62 & 310 & 15.698 & 186,5 \\
+\hline
+\end{tabular}
+\end{table}
+
+Temuan penting dari pencarian konfigurasi:
+\begin{itemize}
+    \item \textbf{RF dan ET}: Kedalaman 6 sudah cukup mempertahankan kualitas, dengan total node masing-masing 8.060 dan 8.138 (rata-rata $\approx$81 node/pohon dari maksimum 63 node pada pohon sempurna kedalaman 6).
+    \item \textbf{HistGB}: Seluruh 62 iterasi asli dipertahankan (310 pohon = 62 iterasi $\times$ 5 kelas), dengan kedalaman 10 dipilih karena menunjukkan \textit{fidelity} tertinggi ($|\Delta F1| = 0{,}0003$).
+    \item \textbf{GB}: Model ini menunjukkan degradasi kualitas yang signifikan pada semua konfigurasi yang memenuhi batasan memori. Masalah ini dibahas secara rinci pada Subbagian~\ref{subsec:quality_eval}.
+\end{itemize}
+
+\subsubsection{Tahap 4: Evaluasi Kualitas Model}
+\label{subsec:quality_eval}
+
+Sebelum analisis latensi, dilakukan evaluasi kualitas model secara menyeluruh untuk memastikan bahwa optimasi kedalaman tidak menyebabkan degradasi performa yang tidak dapat diterima. Evaluasi dilakukan pada \textit{test set} yang sama yang digunakan dalam pelatihan (20\% data, \textit{stratified split}, \texttt{random\_state=42}).
+
+\paragraph{Metodologi Evaluasi Kualitas}
+Untuk setiap model, dibandingkan prediksi model asli (\textit{scikit-learn}) dengan prediksi model yang telah dioptimasi kedalaman menggunakan implementasi traversal pohon Python yang identik dengan implementasi C:
+
+\begin{enumerate}
+    \item Muat model asli dari artefak MLflow
+    \item Hasilkan prediksi asli menggunakan \texttt{model.predict(X\_test)}
+    \item Hitung metrik asli: akurasi, F1 \textit{macro}, F1 \textit{weighted}, serta F1 per kelas
+    \item Ekstrak pohon dengan pembatasan kedalaman
+    \item Lakukan traversal pohon secara manual dan agregasi (\textit{voting} atau \textit{scoring})
+    \item Hitung metrik yang sama untuk prediksi versi ARM
+    \item Bandingkan metrik dan tentukan apakah kualitas dipertahankan ($\Delta F1_{macro} \geq -0{,}01$)
+\end{enumerate}
+
+\paragraph{Hasil Evaluasi Kualitas}
+
+\begin{table}[htbp]
+\centering
+\caption{Perbandingan Kualitas Model: Asli vs.\ ARM-Optimized}
+\label{tab:quality_comparison}
+\begin{tabular}{lccccl}
+\hline
+\textbf{Model} & \textbf{Akurasi Asli} & \textbf{Akurasi ARM} & \textbf{$F1_M$ Asli} & \textbf{$F1_M$ ARM} & \textbf{Status} \\
+\hline
+Extra Trees & 0,8312 & 0,9069 & 0,1889 & 0,2200 & OK ($+0{,}031$) \\
+Random Forest & 0,8268 & 0,8135 & 0,2669 & 0,2620 & OK ($-0{,}005$) \\
+Grad.\ Boosting & 0,4859 & 0,0852 & 0,1661 & 0,0607 & DROP ($-0{,}105$) \\
+HistGrad.\ Boosting & 0,7163 & 0,7150 & 0,2077 & 0,2075 & OK ($-0{,}0003$) \\
+\hline
+\end{tabular}
+\end{table}
+
+Hasil evaluasi per kelas ditunjukkan pada Tabel~\ref{tab:per_class_f1}:
+
+\begin{table}[htbp]
+\centering
+\caption{Skor $F1$ per Kelas: Asli vs.\ ARM-Optimized}
+\label{tab:per_class_f1}
+\begin{tabular}{lcccccc}
+\hline
+\textbf{Model} & \textbf{Metrik} & \textbf{Normal} & \textbf{Flooding} & \textbf{Blackhole} & \textbf{Grayhole} & \textbf{TDMA} \\
+\hline
+\multirow{2}{*}{Extra Trees} 
+  & Asli & 0,9084 & 0,0000 & 0,0000 & 0,0000 & 0,0359 \\
+  & ARM  & 0,9515 & 0,0000 & 0,0000 & 0,0000 & 0,1485 \\
+\hline
+\multirow{2}{*}{Random Forest} 
+  & Asli & 0,9391 & 0,1723 & 0,0000 & 0,0000 & 0,2232 \\
+  & ARM  & 0,9309 & 0,1695 & 0,0000 & 0,0000 & 0,2095 \\
+\hline
+\multirow{2}{*}{Grad.\ Boosting} 
+  & Asli & 0,6884 & 0,1391 & 0,0000 & 0,0000 & 0,0028 \\
+  & ARM  & 0,1535 & 0,1443 & 0,0000 & 0,0000 & 0,0057 \\
+\hline
+\multirow{2}{*}{HistGrad.\ Boosting} 
+  & Asli & 0,8740 & 0,1408 & 0,0000 & 0,0000 & 0,0239 \\
+  & ARM  & 0,8731 & 0,1408 & 0,0000 & 0,0000 & 0,0234 \\
+\hline
+\end{tabular}
+\end{table}
+
+\paragraph{Analisis Hasil Kualitas}
+
+\begin{enumerate}
+    \item \textbf{Extra Trees}: Pembatasan kedalaman dari 20 ke 6 justru \textit{meningkatkan} performa ($\Delta F1_{macro} = +0{,}031$). Fenomena ini disebabkan oleh efek regularisasi: pohon yang lebih dangkal mengurangi \textit{overfitting} pada data pelatihan, terutama terlihat pada peningkatan F1 kelas TDMA dari 0,036 menjadi 0,149.
+
+    \item \textbf{Random Forest}: Kualitas model dipertahankan dengan sangat baik ($\Delta F1_{macro} = -0{,}005$). Penurunan kecil pada kelas Normal ($-0{,}008$) dan TDMA ($-0{,}014$) berada dalam batas toleransi.
+
+    \item \textbf{Gradient Boosting}: Model ini mengalami degradasi signifikan ($\Delta F1_{macro} = -0{,}105$) yang tidak dapat diterima. Analisis menunjukkan bahwa model GB asli sudah memiliki performa rendah (akurasi 48,59\%) karena \textit{oversampling} SMOTE-ENN mengganggu proses \textit{boosting} sekuensial. Pembatasan kedalaman memperparah degradasi karena GB memerlukan pohon yang dalam untuk mengkompensasi residual secara bertahap. Dengan 100 \textit{stage} $\times$ 5 kelas = 500 pohon pada kedalaman penuh 10, model memerlukan 7,9~MB --- jauh melebihi kapasitas flash 1~MB.
+
+    \item \textbf{Histogram Gradient Boosting}: \textit{Fidelity} hampir sempurna ($\Delta F1_{macro} = -0{,}0003$) dengan semua 62 iterasi asli dipertahankan dan kedalaman dibatasi dari 15 ke 10. Hal ini menunjukkan bahwa pohon HistGB tidak menggunakan kedalaman penuh pada sebagian besar node.
+\end{enumerate}
+
+Berdasarkan hasil di atas, \textbf{tiga dari empat model} (ET, RF, HistGB) memenuhi syarat kualitas untuk deployment. Model Gradient Boosting \textbf{tidak layak} untuk deployment pada arsitektur ini dengan \textit{oversampling} SMOTE-ENN.
+
+\subsubsection{Tahap 5: Generasi Kode C untuk ARM Cortex-M4F}
+
+Kode C yang dihasilkan disesuaikan dengan arsitektur ARM Cortex-M4F untuk memanfaatkan FPU dan instruksi Thumb-2 secara optimal. Untuk setiap model, dihasilkan tujuh file:
+
+\begin{enumerate}
+    \item \texttt{model\_config.h}: Definisi konfigurasi model (jumlah pohon, fitur, kelas)
+    \item \texttt{tree\_data.h}: Data pohon dalam format array \texttt{const} (disimpan di flash)
+    \item \texttt{inference.h}: Deklarasi fungsi inferensi
+    \item \texttt{inference.c}: Implementasi fungsi traversal pohon dan agregasi ensemble
+    \item \texttt{main.c}: Program \textit{benchmark} menggunakan \textit{DWT Cycle Counter}
+    \item \texttt{Makefile}: Konfigurasi kompilasi untuk ARM Cortex-M4F
+    \item \texttt{linker.ld}: \textit{Linker script} minimal untuk nRF52840
+\end{enumerate}
+
+\paragraph{Dua Varian Inferensi}
+Terdapat dua varian implementasi inferensi yang mencerminkan perbedaan mekanisme agregasi:
+
+\begin{enumerate}
+    \item \textbf{Voting} (RF, ET): Setiap pohon menghasilkan prediksi kelas, kemudian kelas dengan suara terbanyak dipilih sebagai hasil akhir.
+    \item \textbf{Scoring} (GB, HistGB): Setiap pohon menghasilkan skor \textit{floating-point} yang dijumlahkan per kelas, dikalikan \textit{learning rate}, dan ditambahkan ke skor awal (\textit{initial scores}). Kelas dengan skor tertinggi dipilih.
+\end{enumerate}
+
+Pseudocode untuk traversal pohon dan inferensi \textit{ensemble} ditunjukkan pada Algoritma~\ref{alg:arm_tree_predict} dan~\ref{alg:arm_ensemble}.
+
+\begin{algorithm}[htbp]
+\caption{Traversal Pohon Keputusan Float32 pada ARM Cortex-M4F}
+\label{alg:arm_tree_predict}
+\begin{algorithmic}[1]
+\REQUIRE nodes: array TreeNode, features: array float32[16]
+\ENSURE predicted\_class (voting) atau leaf\_value (scoring)
+\STATE node $\leftarrow$ nodes[0]
+\WHILE{node.feature\_idx $\neq$ 0xFFFF}
+    \IF{features[node.feature\_idx] $\leq$ node.threshold}
+        \STATE node $\leftarrow$ nodes[node.left\_child] \COMMENT{VCMPE.F32 + ITE}
+    \ELSE
+        \STATE node $\leftarrow$ nodes[node.right\_child]
+    \ENDIF
+\ENDWHILE
+\RETURN (uint8\_t) node.threshold \COMMENT{ID kelas atau skor daun}
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[htbp]
+\caption{Inferensi Ensemble (Varian Voting)}
+\label{alg:arm_ensemble}
+\begin{algorithmic}[1]
+\REQUIRE features: float32[16], trees: array of tree pointers
+\ENSURE predicted\_class: uint8\_t
+\STATE votes[N\_CLASSES] $\leftarrow$ \{0\}
+\FOR{$i \leftarrow 0$ \textbf{to} N\_TREES $- 1$}
+    \STATE cls $\leftarrow$ tree\_predict(trees[$i$], features)
+    \STATE votes[cls]++
+\ENDFOR
+\STATE best $\leftarrow$ 0
+\FOR{$c \leftarrow 1$ \textbf{to} N\_CLASSES $- 1$}
+    \IF{votes[$c$] $>$ votes[best]}
+        \STATE best $\leftarrow$ $c$
+    \ENDIF
+\ENDFOR
+\RETURN best
+\end{algorithmic}
+\end{algorithm}
+
+\subsubsection{Tahap 6: Kompilasi dan Analisis Siklus}
+
+\paragraph{Kompilasi untuk ARM Cortex-M4F}
+Kode C dikompilasi menggunakan \texttt{arm-none-eabi-gcc} versi 15.2.0 dengan opsi yang mengaktifkan FPU perangkat keras:
+
+\begin{verbatim}
+arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 \
+    -mfloat-abi=hard -O2 -ffreestanding -nostdlib -nostartfiles \
+    -T linker.ld -o inference.elf main.o inference.o -lgcc
+\end{verbatim}
+
+Opsi kompilasi yang digunakan:
+\begin{itemize}
+    \item \texttt{-mcpu=cortex-m4}: Target prosesor Cortex-M4
+    \item \texttt{-mthumb}: Gunakan set instruksi Thumb-2 (16/32-bit campuran)
+    \item \texttt{-mfpu=fpv4-sp-d16}: Aktifkan FPU \textit{single-precision} dengan 16 register \textit{double-word}
+    \item \texttt{-mfloat-abi=hard}: Gunakan konvensi pemanggilan \textit{hardware float} (argumen float melalui register FPU)
+    \item \texttt{-O2}: Optimasi agresif termasuk \textit{inlining} dan \textit{loop optimization}
+\end{itemize}
+
+\paragraph{Analisis Disassembly dan Estimasi Siklus}
+Estimasi siklus per node diperoleh melalui analisis \textit{disassembly} menggunakan \texttt{arm-none-eabi-objdump}. Kompilator melakukan \textit{inlining} fungsi \texttt{tree\_predict} ke dalam \texttt{ensemble\_predict}, menghasilkan \textit{inner loop} yang sangat efisien.
+
+Tabel~\ref{tab:arm_cycles} menunjukkan rincian instruksi pada \textit{inner loop} traversal pohon:
+
+\begin{table}[htbp]
+\centering
+\caption{Analisis Siklus \textit{Inner Loop} Traversal Pohon pada ARM Cortex-M4F}
+\label{tab:arm_cycles}
+\begin{tabular}{llc}
+\hline
+\textbf{Instruksi} & \textbf{Operasi} & \textbf{Siklus} \\
+\hline
+\texttt{ADD.W} & Hitung alamat fitur ($r_0 + \texttt{feat\_idx} \times 4$) & 1 \\
+\texttt{VLDR} & Muat nilai fitur dari memori (float32) & 1 \\
+\texttt{VCMPE.F32} & Perbandingan \textit{floating-point} pada FPU & 1 \\
+\texttt{VMRS} & Transfer flag FPU ke register status ARM & 1 \\
+\texttt{ITE LS} & Instruksi kondisional \textit{If-Then-Else} & $\approx$0 \\
+\texttt{LDRH} (cond.) & Muat indeks anak kiri/kanan (16-bit, kondisional) & 1 \\
+\texttt{ADD.W} $\times$2 & Hitung alamat node baru ($\texttt{idx} \times 3$, lalu $\times 4$) & 2 \\
+\texttt{VLDR} & Muat \textit{threshold} node berikutnya & 1 \\
+\texttt{LDRH} & Muat indeks fitur node berikutnya & 1 \\
+\texttt{CMP} & Periksa apakah node daun (\texttt{0xFFFF}) & 1 \\
+\texttt{BNE} & Kembali ke awal loop (prediksi cabang) & $\approx$1 \\
+\hline
+\multicolumn{2}{l}{\textbf{Total per node}} & \textbf{$\approx$12} \\
+\hline
+\end{tabular}
+\end{table}
+
+Perbandingan siklus per node antara MSP430 (INT8) dan ARM Cortex-M4F (Float32):
+\begin{itemize}
+    \item \textbf{MSP430 (INT8)}: $\approx$25 siklus/node --- perbandingan 8-bit sederhana, tetapi overhead akses memori dan arsitektur 16-bit CISC lebih tinggi.
+    \item \textbf{ARM Cortex-M4F (Float32)}: $\approx$12 siklus/node --- instruksi \texttt{VCMPE.F32} menyelesaikan perbandingan \textit{floating-point} dalam 1 siklus, arsitektur \textit{pipeline} 3-tahap, dan \textit{inlining} menghilangkan overhead panggilan fungsi.
+\end{itemize}
+
+\paragraph{Model Estimasi Siklus Total}
+
+Total siklus inferensi dihitung berdasarkan:
+
+\begin{equation}
+    C_{total} = N_{pohon} \times (C_{overhead} + d_{rata-rata} \times C_{per\_node}) + C_{agregasi}
+\end{equation}
+
+di mana:
+\begin{itemize}
+    \item $C_{per\_node} = 12$ siklus (dari analisis \textit{disassembly})
+    \item $C_{overhead} = 8$ siklus per pohon (overhead \textit{inlined} loop: inisialisasi pointer, BL/BX)
+    \item $d_{rata-rata}$ = kedalaman rata-rata pohon
+    \item $C_{agregasi}$: overhead agregasi \textit{ensemble}
+\end{itemize}
+
+Untuk agregasi:
+\begin{itemize}
+    \item \textbf{Voting}: 3 siklus/pohon (load + increment + store) + 20 siklus \textit{argmax} = $3N_{pohon} + 20$
+    \item \textbf{Scoring}: 5 siklus/pohon (load + VMUL + VADD + VSTR) + 30 siklus \textit{argmax} = $5N_{pohon} + 30$
+\end{itemize}
+
+Tidak diperlukan tahap kuantisasi fitur karena data sudah dalam format \textit{float32} yang kompatibel langsung dengan FPU, sehingga $C_{quant} = 0$.
+
+\subsection{Hasil Evaluasi Latensi Inferensi}
+
+\subsubsection{Penggunaan Memori}
+
+\begin{table}[htbp]
+\centering
+\caption{Penggunaan Memori pada nRF52840 (1~MB Flash)}
+\label{tab:arm_memory}
+\begin{tabular}{lccccc}
+\hline
+\textbf{Model} & \textbf{Pohon} & \textbf{Node} & \textbf{.text (byte)} & \textbf{Total (byte)} & \textbf{Flash (\%)} \\
+\hline
+Extra Trees & 100 & 8.138  & 98.728   & 98.756   & 9,41\% \\
+Random Forest & 100 & 8.060 & 97.792   & 97.820   & 9,33\% \\
+Gradient Boosting & 50 & 5.864 & 71.340  & 71.368   & 6,80\% \\
+HistGrad.\ Boosting & 310 & 15.698 & 190.648 & 190.676  & 18,18\% \\
+\hline
+\end{tabular}
+\end{table}
+
+Semua model dapat dimuat dalam memori flash nRF52840 dengan penggunaan kurang dari 19\%. Model terbesar (HistGradient Boosting dengan 310 pohon) hanya menggunakan 186~KB dari 1~MB yang tersedia, menyisakan lebih dari 800~KB untuk \textit{protocol stack}, driver radio, dan kode aplikasi.
+
+\subsubsection{Rincian Jumlah Siklus}
+
+\begin{table}[htbp]
+\centering
+\caption{Rincian Jumlah Siklus per Komponen pada ARM Cortex-M4F}
+\label{tab:arm_cycles_detail}
+\begin{tabular}{lcccc}
+\hline
+\textbf{Komponen} & \textbf{Extra Trees} & \textbf{Random Forest} & \textbf{Grad.\ Boosting} & \textbf{HistGrad.\ Boosting} \\
+\hline
+Kuantisasi Fitur & 0 & 0 & 0 & 0 \\
+Traversal Pohon ($\times N$) & 7.200 & 7.200 & 3.600 & 37.820 \\
+Overhead per Pohon ($\times N$) & 800 & 800 & 400 & 2.480 \\
+Agregasi Ensemble & 320 & 320 & 280 & 1.580 \\
+\textbf{Total Siklus (rata-rata)} & \textbf{8.315} & \textbf{8.315} & \textbf{4.280} & \textbf{40.950} \\
+\hline
+\end{tabular}
+\end{table}
+
+Pengamatan dari tabel di atas:
+\begin{itemize}
+    \item Komponen kuantisasi fitur bernilai nol karena FPU perangkat keras menangani perbandingan \textit{float32} secara native.
+    \item HistGradient Boosting memiliki siklus tertinggi karena jumlah pohon terbanyak (310 pohon, dari 62 iterasi $\times$ 5 kelas).
+    \item Overhead agregasi pada model \textit{scoring} (GB, HistGB) lebih tinggi karena melibatkan operasi \textit{floating-point} (perkalian \textit{learning rate} dan penjumlahan skor).
+\end{itemize}
+
+\subsubsection{Hasil Waktu Inferensi}
+
+Waktu inferensi dihitung dari jumlah siklus dibagi frekuensi clock 64~MHz:
+
+\begin{equation}
+    t_{inferensi} = \frac{C_{total}}{f_{clock}} = \frac{C_{total}}{64 \times 10^6} \text{ detik}
+\end{equation}
+
+\begin{table}[htbp]
+\centering
+\caption{Hasil Latensi Inferensi pada nRF52840 @ 64 MHz}
+\label{tab:arm_latency}
+\begin{tabular}{lcccc}
+\hline
+\textbf{Model} & \textbf{Siklus} & \textbf{Latensi ($\mu$s)} & \textbf{Latensi (ms)} & \textbf{Throughput (inf/s)} \\
+\hline
+Extra Trees & 8.315 & 129,9 & 0,130 & 7.700 \\
+Random Forest & 8.315 & 129,9 & 0,130 & 7.700 \\
+Gradient Boosting$^{*}$ & 4.280 & 66,9 & 0,067 & 14.953 \\
+HistGrad.\ Boosting & 40.950 & 639,8 & 0,640 & 1.563 \\
+\hline
+\multicolumn{5}{l}{\footnotesize $^{*}$Tidak memenuhi syarat kualitas ($\Delta F1 = -0{,}105$); disertakan sebagai referensi.}
+\end{tabular}
+\end{table}
+
+\subsubsection{Estimasi Konsumsi Energi}
+
+Konsumsi energi per inferensi dihitung berdasarkan karakteristik daya nRF52840:
+
+\begin{equation}
+    E_{inferensi} = I_{aktif} \times V_{supply} \times t_{inferensi}
+\end{equation}
+
+Dengan arus aktif 4,8~mA pada 64~MHz dan tegangan 3,0V:
+
+\begin{table}[htbp]
+\centering
+\caption{Konsumsi Energi per Inferensi pada nRF52840}
+\label{tab:arm_energy}
+\begin{tabular}{lccc}
+\hline
+\textbf{Model} & \textbf{Latensi ($\mu$s)} & \textbf{Daya (mW)} & \textbf{Energi ($\mu$J)} \\
+\hline
+Extra Trees & 129,9 & 14,4 & 1,87 \\
+Random Forest & 129,9 & 14,4 & 1,87 \\
+Gradient Boosting$^{*}$ & 66,9 & 14,4 & 0,96 \\
+HistGrad.\ Boosting & 639,8 & 14,4 & 9,21 \\
+\hline
+\end{tabular}
+\end{table}
+
+Sebagai perbandingan, transmisi radio IEEE 802.15.4 pada nRF52840 mengkonsumsi sekitar 0,5--1~mJ per paket (termasuk overhead \textit{Clear Channel Assessment} dan \textit{acknowledgment}). Dengan demikian, energi inferensi model terbesar (HistGradient Boosting, 9,21~$\mu$J) hanya mewakili sekitar 0,9--1,8\% dari energi transmisi radio.
+
+\subsection{Analisis dan Pembahasan}
+
+\subsubsection{Kesesuaian dengan Batasan Waktu Protokol LEACH}
+
+Dalam protokol LEACH, selama fase \textit{steady-state} ($\approx$18--19 detik), CH menerima data dari anggota cluster dengan interval 1--2 detik per anggota. Dalam skenario terburuk dengan 10 paket/detik:
+
+\begin{equation}
+    t_{paket} = 100 \text{ ms}
+\end{equation}
+
+Rasio margin waktu untuk model dengan latensi terbesar (HistGradient Boosting):
+\begin{equation}
+    \text{Margin} = \frac{t_{paket}}{t_{inferensi}} = \frac{100 \text{ ms}}{0{,}640 \text{ ms}} \approx 156\times
+\end{equation}
+
+Bahkan untuk model terbesar, margin waktu sebesar 156$\times$ memastikan bahwa sistem IDS dapat beroperasi secara \textit{real-time} tanpa mengganggu operasi normal protokol. Untuk model RF dan ET, margin mencapai $\approx$770$\times$.
+
+\subsubsection{Perbandingan antar Model}
+
+\begin{enumerate}
+    \item \textbf{Extra Trees dan Random Forest}: Kedua model menunjukkan karakteristik latensi identik (129,9~$\mu$s) karena memiliki konfigurasi serupa (100 pohon, kedalaman 6). Extra Trees menunjukkan peningkatan kualitas akibat efek regularisasi, sementara Random Forest mempertahankan kualitas asli dengan sangat baik. Kedua model direkomendasikan untuk aplikasi yang memerlukan keseimbangan antara latensi dan akurasi.
+
+    \item \textbf{Gradient Boosting}: Meskipun memiliki latensi terendah (66,9~$\mu$s), model ini \textbf{tidak layak untuk deployment} karena degradasi kualitas yang parah ($\Delta F1 = -0{,}105$). Masalah mendasarnya adalah bahwa model GB asli sudah berperforma rendah (akurasi 48,59\%) akibat interferensi SMOTE-ENN dengan proses \textit{boosting} sekuensial, dan pembatasan kedalaman semakin memperburuk degradasi.
+
+    \item \textbf{Histogram Gradient Boosting}: Model ini memiliki latensi tertinggi (639,8~$\mu$s) namun tetap jauh di bawah batasan \textit{real-time}. Kelebihannya adalah \textit{fidelity} hampir sempurna ($\Delta F1 = -0{,}0003$) karena semua iterasi asli dipertahankan. Model ini cocok untuk skenario yang mengutamakan akurasi di atas latensi.
+\end{enumerate}
+
+\subsubsection{Keunggulan Pendekatan Float32 Native}
+
+Penggunaan representasi \textit{float32} native pada ARM Cortex-M4F memberikan beberapa keunggulan signifikan dibanding pendekatan kuantisasi INT8:
+
+\begin{enumerate}
+    \item \textbf{Eliminasi \textit{Error} Kuantisasi}: Tidak ada degradasi akurasi akibat konversi tipe data. Satu-satunya sumber penurunan akurasi adalah pembatasan kedalaman pohon, yang dapat dikontrol dan dievaluasi secara langsung.
+
+    \item \textbf{Penghematan Siklus Kuantisasi}: Tahap kuantisasi fitur ($\approx$650 siklus pada MSP430) sepenuhnya dihilangkan, menghemat waktu komputasi pada setiap inferensi.
+
+    \item \textbf{Evaluasi Kualitas yang Transparan}: Karena tidak ada kuantisasi, setiap perbedaan antara prediksi model asli dan versi embedded dapat diatribusikan secara langsung ke pembatasan kedalaman pohon, memudahkan analisis dan debugging.
+
+    \item \textbf{Konsistensi Numerik}: Hasil inferensi pada mikrokontroler dijamin identik dengan simulasi Python (kecuali pembulatan IEEE 754 yang minimal), meningkatkan kepercayaan pada deployment.
+\end{enumerate}
+
+\subsubsection{Implikasi untuk Deployment WSN}
+
+Hasil evaluasi mengkonfirmasi kelayakan deployment model IDS berbasis \textit{tree ensemble} pada platform ARM Cortex-M4F:
+
+\begin{enumerate}
+    \item \textbf{Efisiensi Memori}: Semua model menggunakan kurang dari 19\% kapasitas flash, menyisakan ruang yang cukup untuk:
+    \begin{itemize}
+        \item Stack protokol LEACH dan MAC 802.15.4 ($\approx$50--80~KB)
+        \item \textit{Softdevice} Nordic (jika menggunakan BLE) ($\approx$152~KB)
+        \item Driver radio dan HAL ($\approx$40~KB)
+        \item Kode aplikasi sensor ($\approx$30--50~KB)
+    \end{itemize}
+
+    \item \textbf{Kapabilitas \textit{Real-time}}: Seluruh model yang layak menunjukkan latensi sub-milidetik ($\leq$640~$\mu$s), memungkinkan inspeksi per-paket tanpa \textit{buffering}.
+
+    \item \textbf{Efisiensi Energi}: Konsumsi energi inferensi (1,87--9,21~$\mu$J) sangat kecil dibanding energi transmisi radio ($\approx$0,5--1~mJ per paket), sehingga tidak berdampak signifikan pada masa pakai baterai.
+
+    \item \textbf{Tiga Model Layak}: Extra Trees, Random Forest, dan Histogram Gradient Boosting semuanya memenuhi batasan kualitas, memori, dan latensi. Gradient Boosting tidak layak akibat degradasi kualitas intrinsik dari kombinasi SMOTE-ENN dengan \textit{boosting} sekuensial.
+\end{enumerate}
+
+\subsubsection{Keterbatasan Evaluasi}
+
+Beberapa keterbatasan dari metodologi evaluasi ini perlu diperhatikan:
+
+\begin{enumerate}
+    \item \textbf{Estimasi Siklus Statis}: Penghitungan siklus dilakukan berdasarkan analisis \textit{disassembly} (12 siklus/node), bukan pengukuran langsung menggunakan DWT \textit{Cycle Counter} pada perangkat keras fisik. Variasi akibat \textit{flash wait-state}, \textit{pipeline stall}, atau \textit{interrupt} tidak diperhitungkan. Estimasi ini dianggap konservatif karena \textit{branch prediction} Cortex-M4 dapat mengurangi siklus efektif.
+
+    \item \textbf{Pembatasan Kedalaman Pohon}: Dampak pembatasan kedalaman terhadap akurasi dievaluasi secara eksplisit (Tahap 4), berbeda dengan evaluasi MSP430 sebelumnya yang tidak menyertakan analisis kualitas. Hasil menunjukkan bahwa dampaknya bervariasi per model.
+
+    \item \textbf{Model Gradient Boosting}: Ketidaklayakan GB bukan disebabkan oleh keterbatasan platform ARM, melainkan oleh kualitas model asli yang rendah akibat interferensi SMOTE-ENN dengan algoritma \textit{boosting}. Pada eksperimen tanpa \textit{oversampling}, GB mungkin menunjukkan hasil yang berbeda.
+
+    \item \textbf{Pengukuran Tunggal}: Evaluasi dilakukan pada satu konfigurasi data (\textit{test set} tetap). Variasi latensi akibat distribusi data yang berbeda (kedalaman traversal bervariasi per sampel) dicakup oleh analisis kasus terbaik dan terburuk.
+\end{enumerate}
+
+\subsection{Ringkasan Evaluasi ARM Cortex-M4F}
+
+\begin{table}[htbp]
+\centering
+\caption{Ringkasan Evaluasi Deployment pada nRF52840 ARM Cortex-M4F}
+\label{tab:arm_summary}
+\begin{tabular}{lcccccl}
+\hline
+\textbf{Model} & \textbf{Pohon} & \textbf{Flash} & \textbf{Latensi} & \textbf{Energi} & \textbf{$\Delta F1$} & \textbf{Layak} \\
+ & & \textbf{(KB)} & \textbf{($\mu$s)} & \textbf{($\mu$J)} & & \\
+\hline
+Extra Trees & 100 & 96,3 & 129,9 & 1,87 & $+0{,}031$ & Ya \\
+Random Forest & 100 & 95,4 & 129,9 & 1,87 & $-0{,}005$ & Ya \\
+Grad.\ Boosting & 50 & 69,3 & 66,9 & 0,96 & $-0{,}105$ & \textbf{Tidak} \\
+HistGrad.\ Boosting & 310 & 186,5 & 639,8 & 9,21 & $-0{,}0003$ & Ya \\
+\hline
+\end{tabular}
+\end{table}
+
+Evaluasi latensi inferensi pada mikrokontroler nRF52840 (ARM Cortex-M4F @ 64~MHz) menunjukkan bahwa:
+
+\begin{enumerate}
+    \item Model \textit{tree ensemble} dalam format \textit{float32} native dapat dieksekusi dengan latensi 129,9--639,8~$\mu$s tanpa kuantisasi, memanfaatkan FPU perangkat keras untuk perbandingan \textit{floating-point} dalam 1 siklus.
+
+    \item Tiga dari empat model (Extra Trees, Random Forest, Histogram Gradient Boosting) memenuhi seluruh batasan deployment: memori ($<$19\% flash), latensi ($<$1~ms), dan kualitas ($|\Delta F1| < 0{,}01$).
+
+    \item Pendekatan \textit{float32} native menghilangkan \textit{error} kuantisasi dan overhead kuantisasi fitur, memberikan konsistensi numerik antara model pelatihan dan model \textit{embedded}.
+
+    \item Model Gradient Boosting tidak layak karena degradasi kualitas intrinsik ($\Delta F1 = -0{,}105$), bukan karena keterbatasan platform. Model asli sudah berperforma rendah (akurasi 48,59\%) akibat interferensi SMOTE-ENN dengan proses \textit{boosting} sekuensial.
+
+    \item Throughput inferensi (1.563--7.700 inferensi/detik) melebihi kebutuhan tipikal WSN sebesar 15--77$\times$, dan konsumsi energi per inferensi (1,87--9,21~$\mu$J) dapat diabaikan dibanding energi transmisi radio.
+\end{enumerate}

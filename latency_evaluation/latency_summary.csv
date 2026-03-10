@@ -1,0 +1,5 @@
+Model,Trees,MaxDepth,TotalCycles,TimeUs,TimeMs,InferencesPerSec,FlashUsage
+extra_trees_no_oversampling,5,6,708,44.25,0.0442,22598.9
+random_forest_no_oversampling,5,6,708,44.25,0.0442,22598.9
+gradient_boosting_no_oversampling,20,6,2133,133.31,0.1333,7501.2
+histgradient_boosting_no_oversampling,20,6,2133,133.31,0.1333,7501.2

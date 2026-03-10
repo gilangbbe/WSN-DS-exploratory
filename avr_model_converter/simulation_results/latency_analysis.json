@@ -1,0 +1,178 @@
+[
+  {
+    "model_name": "extra_trees_no_oversampling",
+    "functions": {
+      "tree_predict": {
+        "cycles": 71,
+        "instructions": 48,
+        "start_addr": "0xfbe",
+        "end_addr": "0xfc8"
+      },
+      "ensemble_predict": {
+        "cycles": 114,
+        "instructions": 74,
+        "start_addr": "0x101e",
+        "end_addr": "0x102c"
+      },
+      "quantize_features": {
+        "cycles": 89,
+        "instructions": 48,
+        "start_addr": "0xf5c",
+        "end_addr": "0xf6a"
+      },
+      "quantize_feature": {
+        "cycles": 155,
+        "instructions": 93,
+        "start_addr": "0xe9c",
+        "end_addr": "0xea8"
+      }
+    },
+    "n_trees": 5,
+    "max_depth": 6,
+    "estimated_cycles": {
+      "quantization": 89,
+      "per_tree_avg": 90,
+      "all_trees": 450,
+      "voting": 55,
+      "total": 708
+    },
+    "timing": {
+      "frequency_mhz": 16,
+      "time_us": 44.25,
+      "time_ms": 0.0442,
+      "throughput_per_sec": 22598.9
+    }
+  },
+  {
+    "model_name": "random_forest_no_oversampling",
+    "functions": {
+      "tree_predict": {
+        "cycles": 71,
+        "instructions": 48,
+        "start_addr": "0xfbe",
+        "end_addr": "0xfc8"
+      },
+      "ensemble_predict": {
+        "cycles": 114,
+        "instructions": 74,
+        "start_addr": "0x101e",
+        "end_addr": "0x102c"
+      },
+      "quantize_features": {
+        "cycles": 89,
+        "instructions": 48,
+        "start_addr": "0xf5c",
+        "end_addr": "0xf6a"
+      },
+      "quantize_feature": {
+        "cycles": 155,
+        "instructions": 93,
+        "start_addr": "0xe9c",
+        "end_addr": "0xea8"
+      }
+    },
+    "n_trees": 5,
+    "max_depth": 6,
+    "estimated_cycles": {
+      "quantization": 89,
+      "per_tree_avg": 90,
+      "all_trees": 450,
+      "voting": 55,
+      "total": 708
+    },
+    "timing": {
+      "frequency_mhz": 16,
+      "time_us": 44.25,
+      "time_ms": 0.0442,
+      "throughput_per_sec": 22598.9
+    }
+  },
+  {
+    "model_name": "gradient_boosting_no_oversampling",
+    "functions": {
+      "tree_predict": {
+        "cycles": 71,
+        "instructions": 48,
+        "start_addr": "0x1976",
+        "end_addr": "0x1980"
+      },
+      "ensemble_predict": {
+        "cycles": 114,
+        "instructions": 74,
+        "start_addr": "0x19d6",
+        "end_addr": "0x19e4"
+      },
+      "quantize_features": {
+        "cycles": 89,
+        "instructions": 48,
+        "start_addr": "0x1914",
+        "end_addr": "0x1922"
+      },
+      "quantize_feature": {
+        "cycles": 155,
+        "instructions": 93,
+        "start_addr": "0x1854",
+        "end_addr": "0x1860"
+      }
+    },
+    "n_trees": 20,
+    "max_depth": 6,
+    "estimated_cycles": {
+      "quantization": 89,
+      "per_tree_avg": 90,
+      "all_trees": 1800,
+      "voting": 130,
+      "total": 2133
+    },
+    "timing": {
+      "frequency_mhz": 16,
+      "time_us": 133.31,
+      "time_ms": 0.1333,
+      "throughput_per_sec": 7501.2
+    }
+  },
+  {
+    "model_name": "histgradient_boosting_no_oversampling",
+    "functions": {
+      "tree_predict": {
+        "cycles": 71,
+        "instructions": 48,
+        "start_addr": "0xc6e",
+        "end_addr": "0xc78"
+      },
+      "ensemble_predict": {
+        "cycles": 114,
+        "instructions": 74,
+        "start_addr": "0xcce",
+        "end_addr": "0xcdc"
+      },
+      "quantize_features": {
+        "cycles": 89,
+        "instructions": 48,
+        "start_addr": "0xc0c",
+        "end_addr": "0xc1a"
+      },
+      "quantize_feature": {
+        "cycles": 155,
+        "instructions": 93,
+        "start_addr": "0xb4c",
+        "end_addr": "0xb58"
+      }
+    },
+    "n_trees": 20,
+    "max_depth": 6,
+    "estimated_cycles": {
+      "quantization": 89,
+      "per_tree_avg": 90,
+      "all_trees": 1800,
+      "voting": 130,
+      "total": 2133
+    },
+    "timing": {
+      "frequency_mhz": 16,
+      "time_us": 133.31,
+      "time_ms": 0.1333,
+      "throughput_per_sec": 7501.2
+    }
+  }
+]

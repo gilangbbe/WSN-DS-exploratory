@@ -1,0 +1,136 @@
+\subsubsection{MSP430 Deployment Evaluation}
+
+To evaluate the deployment feasibility on hardware commonly used in LEACH-based WSN implementations, this study targets the MSP430F5529 microcontroller. The MSP430 family is widely adopted in WSN research and commercial deployments due to its ultra-low power consumption and integrated peripherals suitable for wireless sensor applications.
+
+\paragraph{Target Platform Specifications}
+
+\begin{table}[htbp]
+\centering
+\caption{MSP430F5529 Platform Specifications}
+\label{tab:msp430_specs}
+\begin{tabular}{ll}
+\hline
+\textbf{Parameter} & \textbf{Value} \\
+\hline
+Architecture & 16-bit RISC \\
+Clock Frequency & 25 MHz \\
+Flash Memory & 128 KB \\
+SRAM & 8 KB \\
+Active Current & 290 $\mu$A/MHz \\
+Low Power Mode & 1.6 $\mu$A (LPM3) \\
+Typical Application & WSN motes, LEACH CH \\
+\hline
+\end{tabular}
+\end{table}
+
+\paragraph{Memory Utilization}
+
+\begin{table}[htbp]
+\centering
+\caption{MSP430 Memory Utilization by Model}
+\label{tab:msp430_memory}
+\begin{tabular}{lcccc}
+\hline
+\textbf{Model} & \textbf{Trees} & \textbf{Flash (bytes)} & \textbf{Flash (\%)} & \textbf{RAM (\%)} \\
+\hline
+Extra Trees & 5 & 10,893 & 8.31\% & 3.76\% \\
+Random Forest & 5 & 10,895 & 8.31\% & 3.76\% \\
+Gradient Boosting & 20 & 20,247 & 15.45\% & 3.76\% \\
+HistGradient Boosting & 20 & 8,335 & 6.36\% & 3.76\% \\
+\hline
+\end{tabular}
+\end{table}
+
+\paragraph{Inference Cycle Count Analysis}
+
+\begin{table}[htbp]
+\centering
+\caption{MSP430 Cycle Count Breakdown}
+\label{tab:msp430_cycles}
+\begin{tabular}{lcccc}
+\hline
+\textbf{Component} & \textbf{Extra Trees} & \textbf{Random Forest} & \textbf{Gradient} & \textbf{HistGradient} \\
+\hline
+Feature Quantization & 650 & 650 & 650 & 650 \\
+Tree Traversal & 550 & 550 & 2,200 & 2,200 \\
+Ensemble Overhead & 70 & 70 & 190 & 190 \\
+\textbf{Total Cycles} & \textbf{1,270} & \textbf{1,270} & \textbf{3,040} & \textbf{3,040} \\
+\hline
+\end{tabular}
+\end{table}
+
+\paragraph{Timing Results}
+
+\begin{table}[htbp]
+\centering
+\caption{MSP430 Inference Latency Results (@ 25 MHz)}
+\label{tab:msp430_latency}
+\begin{tabular}{lccc}
+\hline
+\textbf{Model} & \textbf{Latency ($\mu$s)} & \textbf{Latency (ms)} & \textbf{Throughput (inf/s)} \\
+\hline
+Extra Trees & 50.8 & 0.0508 & 19,685.0 \\
+Random Forest & 50.8 & 0.0508 & 19,685.0 \\
+Gradient Boosting & 121.6 & 0.1216 & 8,223.7 \\
+HistGradient Boosting & 121.6 & 0.1216 & 8,223.7 \\
+\hline
+\end{tabular}
+\end{table}
+
+\paragraph{Energy Consumption Estimation}
+
+Based on the MSP430F5529's active mode current consumption of 290~$\mu$A/MHz at 25~MHz (7.25~mA total) operating at 3.3V:
+
+\begin{equation}
+    E_{inference} = I_{active} \times V_{supply} \times t_{inference}
+\end{equation}
+
+\begin{table}[htbp]
+\centering
+\caption{Energy per Inference on MSP430F5529}
+\label{tab:msp430_energy}
+\begin{tabular}{lcc}
+\hline
+\textbf{Model} & \textbf{Time ($\mu$s)} & \textbf{Energy ($\mu$J)} \\
+\hline
+Extra Trees & 50.8 & 1.22 \\
+Random Forest & 50.8 & 1.22 \\
+Gradient Boosting & 121.6 & 2.91 \\
+HistGradient Boosting & 121.6 & 2.91 \\
+\hline
+\end{tabular}
+\end{table}
+
+\paragraph{Analysis and Discussion}
+
+The MSP430 deployment evaluation demonstrates that INT8-quantized tree-based models achieve sub-millisecond inference latencies suitable for real-time intrusion detection in LEACH-based WSN:
+
+\begin{itemize}
+    \item \textbf{Extra Trees and Random Forest} (5 trees, depth 6): Achieve approximately 50.8~$\mu$s latency, enabling 19,685 inferences per second. At typical LEACH round durations of 20 seconds with packet rates of 5--10 packets/second, these models can perform per-packet inspection with negligible CPU overhead ($<$0.01\%).
+    
+    \item \textbf{Gradient Boosting and HistGradient Boosting} (20 trees): Require approximately 121.6~$\mu$s per inference, still achieving 8,224 inferences per second. The 4$\times$ higher tree count results in proportionally longer tree traversal time, though the approach remains highly efficient for WSN deployment.
+\end{itemize}
+
+\paragraph{Comparison with LEACH Timing Constraints}
+
+In LEACH protocol, each round consists of a setup phase ($\approx$1--2 seconds) and a steady-state phase ($\approx$18--19 seconds). During the steady-state phase, the Cluster Head receives data from approximately 10--20 cluster members at intervals of 1--2 seconds. The inference latency requirements can be characterized as:
+
+\begin{equation}
+    t_{inference} \ll t_{packet\_interval}
+\end{equation}
+
+With $t_{packet\_interval} \approx 100$~ms (for 10 packets/second worst case) and $t_{inference} < 0.5$~ms for all evaluated models, the timing margin is approximately 200$\times$, indicating ample headroom for IDS deployment without impacting LEACH protocol timing.
+
+\paragraph{Implications for WSN Deployment}
+
+The MSP430 evaluation confirms the feasibility of deploying tree-based IDS models at LEACH Cluster Heads:
+
+\begin{enumerate}
+    \item \textbf{Memory Efficiency}: All models fit within 20\% of the 128~KB flash, leaving substantial space for the LEACH protocol stack, radio drivers, and application code.
+    
+    \item \textbf{Real-time Capability}: Sub-millisecond inference enables per-packet inspection without buffering, allowing immediate threat detection and response.
+    
+    \item \textbf{Energy Efficiency}: Inference energy consumption (0.5--2~$\mu$J) represents less than 0.1\% of typical radio transmission energy ($\approx$1~mJ per packet for CC2420~\cite{polastre2005versatile}).
+    
+    \item \textbf{Oversampling Unnecessary}: Given that models without oversampling achieve 99\%+ accuracy on WSN-DS, the additional training complexity of oversampling provides no deployment benefit.
+\end{enumerate}

@@ -1,0 +1,244 @@
+
+Discarded input sections
+
+ .text          0x00000000        0x0 main.o
+ .data          0x00000000        0x0 main.o
+ .bss           0x00000000        0x0 main.o
+ .text          0x00000000        0x0 inference.o
+ .data          0x00000000        0x0 inference.o
+ .bss           0x00000000        0x0 inference.o
+ .text.tree_predict
+                0x00000000       0x3c inference.o
+ .text.benchmark_inference
+                0x00000000       0x38 inference.o
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+FLASH            0x00000000         0x00100000         xr
+RAM              0x20000000         0x00040000         xrw
+*default*        0x00000000         0xffffffff
+
+Linker script and memory map
+
+LOAD /opt/homebrew/Cellar/arm-none-eabi-gcc/15.2.0/lib/gcc/arm-none-eabi/15.2.0/thumb/v7e-m+fp/hard/libgcc.a
+LOAD main.o
+LOAD inference.o
+
+.text           0x00000000     0x92b0
+ *(.isr_vector)
+ *(.text*)
+ .text.startup.main
+                0x00000000       0xb4 main.o
+                0x00000000                main
+ .text.ensemble_predict
+                0x000000b4       0xc8 inference.o
+                0x000000b4                ensemble_predict
+ *(.rodata*)
+ .rodata.test_features
+                0x0000017c      0x140 main.o
+ .rodata.tree_class
+                0x000002bc       0x32 inference.o
+ *fill*         0x000002ee        0x2 
+ .rodata.all_trees
+                0x000002f0       0xc8 inference.o
+ .rodata.tree_49
+                0x000003b8      0x2dc inference.o
+ .rodata.tree_48
+                0x00000694      0x2dc inference.o
+ .rodata.tree_47
+                0x00000970      0x2dc inference.o
+ .rodata.tree_46
+                0x00000c4c      0x2dc inference.o
+ .rodata.tree_45
+                0x00000f28      0x2dc inference.o
+ .rodata.tree_44
+                0x00001204      0x2dc inference.o
+ .rodata.tree_43
+                0x000014e0      0x2dc inference.o
+ .rodata.tree_42
+                0x000017bc      0x2dc inference.o
+ .rodata.tree_41
+                0x00001a98      0x2dc inference.o
+ .rodata.tree_40
+                0x00001d74      0x2dc inference.o
+ .rodata.tree_39
+                0x00002050      0x2dc inference.o
+ .rodata.tree_38
+                0x0000232c      0x2dc inference.o
+ .rodata.tree_37
+                0x00002608      0x2dc inference.o
+ .rodata.tree_36
+                0x000028e4      0x2dc inference.o
+ .rodata.tree_35
+                0x00002bc0      0x2dc inference.o
+ .rodata.tree_34
+                0x00002e9c      0x2dc inference.o
+ .rodata.tree_33
+                0x00003178      0x2dc inference.o
+ .rodata.tree_32
+                0x00003454      0x2dc inference.o
+ .rodata.tree_31
+                0x00003730      0x2dc inference.o
+ .rodata.tree_30
+                0x00003a0c      0x2dc inference.o
+ .rodata.tree_29
+                0x00003ce8      0x2dc inference.o
+ .rodata.tree_28
+                0x00003fc4      0x2dc inference.o
+ .rodata.tree_27
+                0x000042a0      0x2dc inference.o
+ .rodata.tree_26
+                0x0000457c      0x2dc inference.o
+ .rodata.tree_25
+                0x00004858      0x2dc inference.o
+ .rodata.tree_24
+                0x00004b34      0x2dc inference.o
+ .rodata.tree_23
+                0x00004e10      0x2dc inference.o
+ .rodata.tree_22
+                0x000050ec      0x2dc inference.o
+ .rodata.tree_21
+                0x000053c8      0x2dc inference.o
+ .rodata.tree_20
+                0x000056a4      0x2dc inference.o
+ .rodata.tree_19
+                0x00005980      0x2dc inference.o
+ .rodata.tree_18
+                0x00005c5c      0x2dc inference.o
+ .rodata.tree_17
+                0x00005f38      0x2dc inference.o
+ .rodata.tree_16
+                0x00006214      0x2dc inference.o
+ .rodata.tree_15
+                0x000064f0      0x2dc inference.o
+ .rodata.tree_14
+                0x000067cc      0x2dc inference.o
+ .rodata.tree_13
+                0x00006aa8      0x2dc inference.o
+ .rodata.tree_12
+                0x00006d84      0x2dc inference.o
+ .rodata.tree_11
+                0x00007060      0x2dc inference.o
+ .rodata.tree_10
+                0x0000733c      0x2dc inference.o
+ .rodata.tree_9
+                0x00007618      0x2dc inference.o
+ .rodata.tree_8
+                0x000078f4      0x2dc inference.o
+ .rodata.tree_7
+                0x00007bd0      0x2dc inference.o
+ .rodata.tree_6
+                0x00007eac      0x2dc inference.o
+ .rodata.tree_5
+                0x00008188      0x2dc inference.o
+ .rodata.tree_4
+                0x00008464      0x2dc inference.o
+ .rodata.tree_3
+                0x00008740      0x2dc inference.o
+ .rodata.tree_2
+                0x00008a1c      0x2dc inference.o
+ .rodata.tree_1
+                0x00008cf8      0x2dc inference.o
+ .rodata.tree_0
+                0x00008fd4      0x2dc inference.o
+                0x000092b0                        . = ALIGN (0x4)
+                0x000092b0                        _etext = .
+
+.glue_7         0x000092b0        0x0
+ .glue_7        0x000092b0        0x0 linker stubs
+
+.glue_7t        0x000092b0        0x0
+ .glue_7t       0x000092b0        0x0 linker stubs
+
+.vfp11_veneer   0x000092b0        0x0
+ .vfp11_veneer  0x000092b0        0x0 linker stubs
+
+.v4_bx          0x000092b0        0x0
+ .v4_bx         0x000092b0        0x0 linker stubs
+
+.iplt           0x000092b0        0x0
+ .iplt          0x000092b0        0x0 main.o
+
+.rel.dyn        0x000092b0        0x0
+ .rel.iplt      0x000092b0        0x0 main.o
+
+.data           0x20000000        0x0 load address 0x000092b0
+                0x20000000                        _sdata = .
+ *(.data*)
+                0x20000000                        . = ALIGN (0x4)
+                0x20000000                        _edata = .
+
+.igot.plt       0x20000000        0x0
+ .igot.plt      0x20000000        0x0 main.o
+
+.bss            0x20000000       0x1c
+                0x20000000                        _sbss = .
+ *(.bss*)
+ .bss.predictions
+                0x20000000        0x5 main.o
+ *fill*         0x20000005        0x3 
+ .bss.cycle_counts
+                0x20000008       0x14 main.o
+ *(COMMON)
+                0x2000001c                        . = ALIGN (0x4)
+                0x2000001c                        _ebss = .
+                0x20040000                        _estack = (ORIGIN (RAM) + LENGTH (RAM))
+                0x00000000                        PROVIDE (Reset_Handler = main)
+OUTPUT(inference_benchmark.elf elf32-littlearm)
+LOAD linker stubs
+
+.debug_info     0x00000000      0x9b9
+ .debug_info    0x00000000      0x1ec main.o
+ .debug_info    0x000001ec      0x7cd inference.o
+
+.debug_abbrev   0x00000000      0x2f9
+ .debug_abbrev  0x00000000      0x10a main.o
+ .debug_abbrev  0x0000010a      0x1ef inference.o
+
+.debug_loclists
+                0x00000000      0x223
+ .debug_loclists
+                0x00000000       0x7b main.o
+ .debug_loclists
+                0x0000007b      0x1a8 inference.o
+
+.debug_aranges  0x00000000       0x50
+ .debug_aranges
+                0x00000000       0x20 main.o
+ .debug_aranges
+                0x00000020       0x30 inference.o
+
+.debug_rnglists
+                0x00000000       0x88
+ .debug_rnglists
+                0x00000000       0x23 main.o
+ .debug_rnglists
+                0x00000023       0x65 inference.o
+
+.debug_line     0x00000000      0x4a1
+ .debug_line    0x00000000      0x1bb main.o
+ .debug_line    0x000001bb      0x2e6 inference.o
+
+.debug_str      0x00000000      0x44e
+ .debug_str     0x00000000      0x44e main.o
+                                0x216 (size before relaxing)
+ .debug_str     0x0000044e        0x0 inference.o
+                                0x43e (size before relaxing)
+
+.comment        0x00000000       0x12
+ .comment       0x00000000       0x12 main.o
+                                 0x13 (size before relaxing)
+ .comment       0x00000012        0x0 inference.o
+                                 0x13 (size before relaxing)
+
+.ARM.attributes
+                0x00000000       0x34
+ .ARM.attributes
+                0x00000000       0x34 main.o
+ .ARM.attributes
+                0x00000034       0x34 inference.o
+
+.debug_frame    0x00000000       0x98
+ .debug_frame   0x00000000       0x38 main.o
+ .debug_frame   0x00000038       0x60 inference.o

@@ -1,0 +1,262 @@
+{
+  "Extra_Trees_Conservative_SMOTE": {
+    "summary": {
+      "model_name": "Extra_Trees_Conservative_SMOTE",
+      "model_type": "ExtraTreesClassifier",
+      "inference_type": "voting",
+      "n_trees": 100,
+      "total_nodes": 49504,
+      "avg_nodes": 495.04,
+      "max_nodes": 771,
+      "min_nodes": 193,
+      "avg_depth": 10.0,
+      "max_depth": 10,
+      "memory_bytes": 594996,
+      "memory_kb": 581.05078125
+    },
+    "depth": 10,
+    "quality": {
+      "model_name": "Extra_Trees_Conservative_SMOTE",
+      "original_accuracy": 0.9908007326608164,
+      "limited_accuracy": 0.958992864758468,
+      "delta_accuracy": -0.03180786790234835,
+      "original_f1_macro": 0.9495940927286,
+      "limited_f1_macro": 0.8096148294501122,
+      "delta_f1_macro": -0.13997926327848775,
+      "original_f1_weighted": 0.9909057382673735,
+      "limited_f1_weighted": 0.9616084225533525,
+      "per_class_f1_delta": {
+        "Blackhole": -0.1684279337471115,
+        "Flooding": -0.13174576110637481,
+        "Grayhole": -0.34084175549735285,
+        "Normal": -0.010683680765287584,
+        "TDMA": -0.04819718527631278
+      },
+      "quality_preserved": false
+    },
+    "latency": {
+      "model_name": "Extra_Trees_Conservative_SMOTE",
+      "model_type": "ExtraTreesClassifier",
+      "n_trees": 100,
+      "total_nodes": 49504,
+      "max_depth": 10,
+      "tree_predict_cycles": {
+        "per_node_cycles": 10,
+        "overhead_cycles": 5
+      },
+      "ensemble_predict_cycles": {
+        "per_tree_cycles": 105,
+        "ensemble_overhead": 320,
+        "total_cycles": 10820
+      },
+      "analytical_cycles_best": 3515,
+      "analytical_cycles_avg": 13115,
+      "analytical_cycles_worst": 13115,
+      "clock_mhz": 64.0,
+      "latency_us_best": 54.921875,
+      "latency_us_avg": 204.921875,
+      "latency_us_worst": 204.921875,
+      "text_bytes": 595120,
+      "data_bytes": 0,
+      "bss_bytes": 28,
+      "total_binary_bytes": 595148,
+      "model_data_bytes": 594996,
+      "model_data_kb": 581.05078125
+    }
+  },
+  "Random_Forest_Conservative_SMOTE": {
+    "summary": {
+      "model_name": "Random_Forest_Conservative_SMOTE",
+      "model_type": "RandomForestClassifier",
+      "inference_type": "voting",
+      "n_trees": 100,
+      "total_nodes": 52710,
+      "avg_nodes": 527.1,
+      "max_nodes": 781,
+      "min_nodes": 303,
+      "avg_depth": 10.0,
+      "max_depth": 10,
+      "memory_bytes": 633468,
+      "memory_kb": 618.62109375
+    },
+    "depth": 10,
+    "quality": {
+      "model_name": "Random_Forest_Conservative_SMOTE",
+      "original_accuracy": 0.9957489269799612,
+      "limited_accuracy": 0.9855108122146586,
+      "delta_accuracy": -0.010238114765302564,
+      "original_f1_macro": 0.9741335534880038,
+      "limited_f1_macro": 0.9446879767297395,
+      "delta_f1_macro": -0.029445576758264314,
+      "original_f1_weighted": 0.9957550523756816,
+      "limited_f1_weighted": 0.9861134880330111,
+      "per_class_f1_delta": {
+        "Blackhole": -0.014209089441433842,
+        "Flooding": -0.0057247579906190005,
+        "Grayhole": -0.1140114560749691,
+        "Normal": -0.005199353379233607,
+        "TDMA": -0.008083226905066021
+      },
+      "quality_preserved": false
+    },
+    "latency": {
+      "model_name": "Random_Forest_Conservative_SMOTE",
+      "model_type": "RandomForestClassifier",
+      "n_trees": 100,
+      "total_nodes": 52710,
+      "max_depth": 10,
+      "tree_predict_cycles": {
+        "per_node_cycles": 10,
+        "overhead_cycles": 5
+      },
+      "ensemble_predict_cycles": {
+        "per_tree_cycles": 105,
+        "ensemble_overhead": 320,
+        "total_cycles": 10820
+      },
+      "analytical_cycles_best": 3515,
+      "analytical_cycles_avg": 13115,
+      "analytical_cycles_worst": 13115,
+      "clock_mhz": 64.0,
+      "latency_us_best": 54.921875,
+      "latency_us_avg": 204.921875,
+      "latency_us_worst": 204.921875,
+      "text_bytes": 633592,
+      "data_bytes": 0,
+      "bss_bytes": 28,
+      "total_binary_bytes": 633620,
+      "model_data_bytes": 633468,
+      "model_data_kb": 618.62109375
+    }
+  },
+  "Gradient_Boosting_Conservative_SMOTE": {
+    "summary": {
+      "model_name": "Gradient_Boosting_Conservative_SMOTE",
+      "model_type": "GradientBoostingClassifier",
+      "inference_type": "scoring",
+      "n_trees": 50,
+      "total_nodes": 48670,
+      "avg_nodes": 973.4,
+      "max_nodes": 1455,
+      "min_nodes": 237,
+      "avg_depth": 10.0,
+      "max_depth": 10,
+      "memory_bytes": 584588,
+      "memory_kb": 570.88671875
+    },
+    "depth": 10,
+    "quality": {
+      "model_name": "Gradient_Boosting_Conservative_SMOTE",
+      "original_accuracy": 0.9963913720987452,
+      "limited_accuracy": 0.9947374176440034,
+      "delta_accuracy": -0.0016539544547418128,
+      "original_f1_macro": 0.9762893644963044,
+      "limited_f1_macro": 0.9711772919687413,
+      "delta_f1_macro": -0.005112072527563183,
+      "original_f1_weighted": 0.9963802340820888,
+      "limited_f1_weighted": 0.9947397088824151,
+      "per_class_f1_delta": {
+        "Blackhole": -0.009025111949045206,
+        "Flooding": -0.00047834518422751326,
+        "Grayhole": -0.024140177328762502,
+        "Normal": -0.000693654985495118,
+        "TDMA": 0.008776926809713648
+      },
+      "quality_preserved": true
+    },
+    "latency": {
+      "model_name": "Gradient_Boosting_Conservative_SMOTE",
+      "model_type": "GradientBoostingClassifier",
+      "n_trees": 50,
+      "total_nodes": 48670,
+      "max_depth": 10,
+      "tree_predict_cycles": {
+        "per_node_cycles": 10,
+        "overhead_cycles": 5
+      },
+      "ensemble_predict_cycles": {
+        "per_tree_cycles": 105,
+        "ensemble_overhead": 270,
+        "total_cycles": 5520
+      },
+      "analytical_cycles_best": 1880,
+      "analytical_cycles_avg": 6680,
+      "analytical_cycles_worst": 6680,
+      "clock_mhz": 64.0,
+      "latency_us_best": 29.375,
+      "latency_us_avg": 104.375,
+      "latency_us_worst": 104.375,
+      "text_bytes": 584996,
+      "data_bytes": 0,
+      "bss_bytes": 28,
+      "total_binary_bytes": 585024,
+      "model_data_bytes": 584588,
+      "model_data_kb": 570.88671875
+    }
+  },
+  "HistGradient_Boosting_Conservative_SMOTE": {
+    "summary": {
+      "model_name": "HistGradient_Boosting_Conservative_SMOTE",
+      "model_type": "HistGradientBoostingClassifier",
+      "inference_type": "scoring",
+      "n_trees": 50,
+      "total_nodes": 3050,
+      "avg_nodes": 61.0,
+      "max_nodes": 61,
+      "min_nodes": 61,
+      "avg_depth": 13.18,
+      "max_depth": 15,
+      "memory_bytes": 37148,
+      "memory_kb": 36.27734375
+    },
+    "depth": 15,
+    "quality": {
+      "model_name": "HistGradient_Boosting_Conservative_SMOTE",
+      "original_accuracy": 0.9943956915169906,
+      "limited_accuracy": 0.9945733891030373,
+      "delta_accuracy": 0.00017769758604668784,
+      "original_f1_macro": 0.9658183565429637,
+      "limited_f1_macro": 0.9687469546721734,
+      "delta_f1_macro": 0.0029285981292097585,
+      "original_f1_weighted": 0.9944365288500663,
+      "limited_f1_weighted": 0.9945932214178539,
+      "per_class_f1_delta": {
+        "Blackhole": -0.007283644930018096,
+        "Flooding": -0.0023589250877710244,
+        "Grayhole": -0.016691084362416397,
+        "Normal": 0.00030193930118327383,
+        "TDMA": 0.04067470572507159
+      },
+      "quality_preserved": true
+    },
+    "latency": {
+      "model_name": "HistGradient_Boosting_Conservative_SMOTE",
+      "model_type": "HistGradientBoostingClassifier",
+      "n_trees": 50,
+      "total_nodes": 3050,
+      "max_depth": 15,
+      "tree_predict_cycles": {
+        "per_node_cycles": 10,
+        "overhead_cycles": 5
+      },
+      "ensemble_predict_cycles": {
+        "per_tree_cycles": 136,
+        "ensemble_overhead": 270,
+        "total_cycles": 7070
+      },
+      "analytical_cycles_best": 1880,
+      "analytical_cycles_avg": 8580,
+      "analytical_cycles_worst": 9680,
+      "clock_mhz": 64.0,
+      "latency_us_best": 29.375,
+      "latency_us_avg": 134.0625,
+      "latency_us_worst": 151.25,
+      "text_bytes": 37552,
+      "data_bytes": 0,
+      "bss_bytes": 28,
+      "total_binary_bytes": 37580,
+      "model_data_bytes": 37148,
+      "model_data_kb": 36.27734375
+    }
+  }
+}

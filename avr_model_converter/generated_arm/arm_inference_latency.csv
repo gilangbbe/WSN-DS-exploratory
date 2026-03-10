@@ -1,0 +1,5 @@
+Model,Type,N_Trees,Total_Nodes,Max_Depth,Cycles_Best,Cycles_Avg,Cycles_Worst,Latency_us_Best,Latency_us_Avg,Latency_us_Worst,Text_Bytes,Data_Bytes,Total_Binary_Bytes,Model_Data_KB
+Extra_Trees_Conservative_SMOTE,ExtraTreesClassifier,100,49504,10,3515,13115,13115,54.9,204.9,204.9,595120,0,595148,581.1
+Random_Forest_Conservative_SMOTE,RandomForestClassifier,100,52710,10,3515,13115,13115,54.9,204.9,204.9,633592,0,633620,618.6
+Gradient_Boosting_Conservative_SMOTE,GradientBoostingClassifier,50,48670,10,1880,6680,6680,29.4,104.4,104.4,584996,0,585024,570.9
+HistGradient_Boosting_Conservative_SMOTE,HistGradientBoostingClassifier,50,3050,15,1880,8580,9680,29.4,134.1,151.2,37552,0,37580,36.3

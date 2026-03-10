@@ -1,0 +1,214 @@
+[
+  {
+    "model_name": "extra_trees_no_oversampling",
+    "n_trees": 5,
+    "n_features": 18,
+    "max_depth": 6,
+    "functions": {
+      "tree_predict": {
+        "instructions": 40,
+        "cycles": 74,
+        "branches": 4,
+        "calls": 0
+      },
+      "ensemble_predict": {
+        "instructions": 43,
+        "cycles": 83,
+        "branches": 4,
+        "calls": 1
+      },
+      "quantize_features": {
+        "instructions": 51,
+        "cycles": 86,
+        "branches": 3,
+        "calls": 3
+      },
+      "quantize_feature": {
+        "instructions": 47,
+        "cycles": 81,
+        "branches": 2,
+        "calls": 3
+      }
+    },
+    "cycle_breakdown": {
+      "quantization": 650,
+      "tree_traversal": 550,
+      "ensemble_overhead": 70,
+      "total": 1270
+    },
+    "timing": {
+      "clock_mhz": 25,
+      "time_us": 50.8,
+      "time_ms": 0.0508,
+      "throughput": 19685.0
+    },
+    "memory": {
+      "text": 10595,
+      "data": 298,
+      "bss": 10,
+      "flash_used": 10893,
+      "flash_pct": 8.31,
+      "ram_used": 308,
+      "ram_pct": 3.76
+    }
+  },
+  {
+    "model_name": "random_forest_no_oversampling",
+    "n_trees": 5,
+    "n_features": 18,
+    "max_depth": 6,
+    "functions": {
+      "tree_predict": {
+        "instructions": 40,
+        "cycles": 74,
+        "branches": 4,
+        "calls": 0
+      },
+      "ensemble_predict": {
+        "instructions": 43,
+        "cycles": 83,
+        "branches": 4,
+        "calls": 1
+      },
+      "quantize_features": {
+        "instructions": 51,
+        "cycles": 86,
+        "branches": 3,
+        "calls": 3
+      },
+      "quantize_feature": {
+        "instructions": 47,
+        "cycles": 81,
+        "branches": 2,
+        "calls": 3
+      }
+    },
+    "cycle_breakdown": {
+      "quantization": 650,
+      "tree_traversal": 550,
+      "ensemble_overhead": 70,
+      "total": 1270
+    },
+    "timing": {
+      "clock_mhz": 25,
+      "time_us": 50.8,
+      "time_ms": 0.0508,
+      "throughput": 19685.0
+    },
+    "memory": {
+      "text": 10597,
+      "data": 298,
+      "bss": 10,
+      "flash_used": 10895,
+      "flash_pct": 8.31,
+      "ram_used": 308,
+      "ram_pct": 3.76
+    }
+  },
+  {
+    "model_name": "gradient_boosting_no_oversampling",
+    "n_trees": 20,
+    "n_features": 18,
+    "max_depth": 6,
+    "functions": {
+      "tree_predict": {
+        "instructions": 40,
+        "cycles": 74,
+        "branches": 4,
+        "calls": 0
+      },
+      "ensemble_predict": {
+        "instructions": 43,
+        "cycles": 83,
+        "branches": 4,
+        "calls": 1
+      },
+      "quantize_features": {
+        "instructions": 51,
+        "cycles": 86,
+        "branches": 3,
+        "calls": 3
+      },
+      "quantize_feature": {
+        "instructions": 47,
+        "cycles": 81,
+        "branches": 2,
+        "calls": 3
+      }
+    },
+    "cycle_breakdown": {
+      "quantization": 650,
+      "tree_traversal": 2200,
+      "ensemble_overhead": 190,
+      "total": 3040
+    },
+    "timing": {
+      "clock_mhz": 25,
+      "time_us": 121.6,
+      "time_ms": 0.1216,
+      "throughput": 8223.7
+    },
+    "memory": {
+      "text": 19949,
+      "data": 298,
+      "bss": 10,
+      "flash_used": 20247,
+      "flash_pct": 15.45,
+      "ram_used": 308,
+      "ram_pct": 3.76
+    }
+  },
+  {
+    "model_name": "histgradient_boosting_no_oversampling",
+    "n_trees": 20,
+    "n_features": 18,
+    "max_depth": 6,
+    "functions": {
+      "tree_predict": {
+        "instructions": 40,
+        "cycles": 74,
+        "branches": 4,
+        "calls": 0
+      },
+      "ensemble_predict": {
+        "instructions": 43,
+        "cycles": 83,
+        "branches": 4,
+        "calls": 1
+      },
+      "quantize_features": {
+        "instructions": 51,
+        "cycles": 86,
+        "branches": 3,
+        "calls": 3
+      },
+      "quantize_feature": {
+        "instructions": 47,
+        "cycles": 81,
+        "branches": 2,
+        "calls": 3
+      }
+    },
+    "cycle_breakdown": {
+      "quantization": 650,
+      "tree_traversal": 2200,
+      "ensemble_overhead": 190,
+      "total": 3040
+    },
+    "timing": {
+      "clock_mhz": 25,
+      "time_us": 121.6,
+      "time_ms": 0.1216,
+      "throughput": 8223.7
+    },
+    "memory": {
+      "text": 8037,
+      "data": 298,
+      "bss": 10,
+      "flash_used": 8335,
+      "flash_pct": 6.36,
+      "ram_used": 308,
+      "ram_pct": 3.76
+    }
+  }
+]

@@ -1,0 +1,136 @@
+% Bagian Tinjauan Pustaka: Static Cycle Counting
+% Untuk dimasukkan ke dalam Bab 2
+
+\subsection{Static Cycle Counting untuk Estimasi Waktu Inferensi}
+\label{subsec:static-cycle-counting}
+
+Evaluasi kinerja temporal model \textit{machine learning} pada mikrokontroler memerlukan metode pengukuran yang akurat dan dapat direproduksi. Pada penelitian ini, digunakan metode \textit{static cycle counting} untuk mengestimasi waktu inferensi model pada platform MSP430F5529. Metode ini dipilih karena memberikan hasil yang deterministik dan tidak memerlukan perangkat keras target secara langsung.
+
+\subsubsection{Definisi dan Prinsip Dasar}
+
+\textit{Static cycle counting} adalah teknik analisis statis yang menghitung jumlah siklus CPU yang diperlukan untuk mengeksekusi suatu program dengan menganalisis kode assembly hasil kompilasi tanpa menjalankan program tersebut secara aktual \cite{wilhelm2008wcet}. Berbeda dengan metode pengukuran dinamis yang mengukur waktu eksekusi secara langsung pada perangkat keras, metode statis menganalisis setiap instruksi dalam kode mesin dan menjumlahkan biaya siklus berdasarkan spesifikasi arsitektur prosesor.
+
+Prinsip dasar metode ini adalah bahwa setiap instruksi pada arsitektur prosesor tertentu memiliki jumlah siklus eksekusi yang telah ditentukan oleh pabrikan. Untuk arsitektur MSP430, informasi ini tersedia dalam dokumen \textit{MSP430x5xx and MSP430x6xx Family User's Guide} \cite{ti2018msp430}. Dengan menganalisis kode assembly menggunakan \textit{disassembler} seperti \texttt{msp430-elf-objdump}, setiap instruksi dapat diidentifikasi dan biaya siklusnya dapat dihitung.
+
+\subsubsection{Siklus Instruksi MSP430}
+
+Arsitektur MSP430 menggunakan set instruksi RISC (\textit{Reduced Instruction Set Computer}) 16-bit dengan jumlah siklus yang bervariasi tergantung pada jenis instruksi dan mode pengalamatan yang digunakan. Tabel \ref{tab:msp430-cycles} menunjukkan jumlah siklus untuk instruksi-instruksi utama yang relevan dengan algoritma inferensi pohon keputusan.
+
+\begin{table}[htbp]
+\centering
+\caption{Jumlah Siklus Instruksi MSP430 yang Relevan}
+\label{tab:msp430-cycles}
+\begin{tabular}{|l|c|l|}
+\hline
+\textbf{Instruksi} & \textbf{Siklus} & \textbf{Keterangan} \\
+\hline
+\texttt{MOV Rn, Rm} & 1 & Salin register ke register \\
+\texttt{MOV @Rn, Rm} & 2 & Muat dari memori (indirect) \\
+\texttt{MOV X(Rn), Rm} & 3 & Muat dari memori (indexed) \\
+\texttt{ADD Rn, Rm} & 1 & Penjumlahan register \\
+\texttt{CMP Rn, Rm} & 1 & Perbandingan register \\
+\texttt{CMP @Rn, Rm} & 2 & Perbandingan dengan memori \\
+\texttt{JNE/JEQ/JMP} & 2 & Lompatan kondisional/tak kondisional \\
+\texttt{CALL} & 4 & Pemanggilan fungsi \\
+\texttt{RET} & 3 & Kembali dari fungsi \\
+\texttt{PUSH} & 3 & Simpan ke stack \\
+\texttt{POP} & 2 & Ambil dari stack \\
+\hline
+\end{tabular}
+\end{table}
+
+Mode pengalamatan mempengaruhi jumlah siklus tambahan. Pengalamatan \textit{indexed} \texttt{X(Rn)} menambah 2 siklus, pengalamatan \textit{indirect} \texttt{@Rn} menambah 1 siklus, dan pengalamatan \textit{immediate} \texttt{\#N} menambah 1 siklus untuk operand sumber.
+
+\subsubsection{Metodologi Penghitungan}
+
+Proses \textit{static cycle counting} pada penelitian ini dilakukan melalui tahapan berikut:
+
+\begin{enumerate}
+    \item \textbf{Kompilasi Kode C}: Kode inferensi model dikompilasi menggunakan \texttt{msp430-elf-gcc} dengan optimisasi level \texttt{-O2} untuk menghasilkan file ELF (\textit{Executable and Linkable Format}).
+    
+    \item \textbf{Disassembly}: File ELF di-\textit{disassemble} menggunakan \texttt{msp430-elf-objdump -d} untuk mendapatkan kode assembly beserta alamat dan opcode setiap instruksi.
+    
+    \item \textbf{Identifikasi Fungsi}: Batas-batas fungsi kritis (\texttt{tree\_predict}, \texttt{ensemble\_predict}, \texttt{quantize\_features}) diidentifikasi dari tabel simbol menggunakan \texttt{msp430-elf-nm}.
+    
+    \item \textbf{Penghitungan Siklus}: Setiap instruksi dalam fungsi-fungsi tersebut dianalisis dan biaya siklusnya dijumlahkan berdasarkan tabel referensi instruksi MSP430.
+    
+    \item \textbf{Estimasi Jalur Eksekusi}: Untuk struktur kontrol seperti loop dan percabangan, digunakan estimasi jalur rata-rata berdasarkan karakteristik algoritma (misalnya, kedalaman pohon rata-rata).
+\end{enumerate}
+
+\subsubsection{Model Analitis untuk Inferensi Pohon Keputusan}
+
+Berdasarkan analisis struktur algoritma inferensi ensemble pohon keputusan, total siklus dapat dimodelkan sebagai:
+
+\begin{equation}
+C_{total} = C_{quant} + C_{trees} + C_{vote}
+\label{eq:total-cycles}
+\end{equation}
+
+\noindent dimana:
+
+\begin{itemize}
+    \item $C_{quant}$ adalah siklus untuk kuantisasi fitur
+    \item $C_{trees}$ adalah siklus untuk traversal semua pohon
+    \item $C_{vote}$ adalah siklus untuk penghitungan voting
+\end{itemize}
+
+Siklus kuantisasi fitur dihitung sebagai:
+
+\begin{equation}
+C_{quant} = N_f \times C_{per\_feature} + C_{loop\_overhead}
+\label{eq:quant-cycles}
+\end{equation}
+
+\noindent dengan $N_f$ adalah jumlah fitur dan $C_{per\_feature} \approx 35$ siklus (mencakup operasi muat skala, perkalian, pergeseran, penjumlahan, dan penyimpanan).
+
+Siklus traversal pohon dihitung sebagai:
+
+\begin{equation}
+C_{trees} = N_t \times (C_{call} + L_{avg} \times C_{per\_node})
+\label{eq:tree-cycles}
+\end{equation}
+
+\noindent dengan $N_t$ adalah jumlah pohon, $C_{call} \approx 10$ siklus untuk \textit{overhead} pemanggilan fungsi, $L_{avg} = \lfloor D_{max}/2 \rfloor + 1$ adalah panjang jalur rata-rata, dan $C_{per\_node} \approx 25$ siklus per node (mencakup operasi muat indeks fitur, muat threshold, perbandingan, percabangan, dan muat pointer anak).
+
+\subsubsection{Keunggulan dan Keterbatasan}
+
+Metode \textit{static cycle counting} memiliki beberapa keunggulan dibandingkan pengukuran dinamis:
+
+\begin{enumerate}
+    \item \textbf{Reprodusibilitas}: Hasil analisis bersifat deterministik dan dapat direproduksi tanpa variasi pengukuran.
+    \item \textbf{Tidak Memerlukan Perangkat Keras}: Analisis dapat dilakukan pada sistem pengembangan tanpa memerlukan perangkat target fisik.
+    \item \textbf{Analisis Worst-Case}: Memungkinkan estimasi \textit{Worst-Case Execution Time} (WCET) yang penting untuk sistem \textit{real-time}.
+    \item \textbf{Granularitas Tinggi}: Dapat mengidentifikasi kontribusi siklus dari setiap bagian kode secara detail.
+\end{enumerate}
+
+Namun, metode ini juga memiliki keterbatasan:
+
+\begin{enumerate}
+    \item \textbf{Tidak Memperhitungkan Cache}: MSP430F5529 tidak memiliki cache instruksi, sehingga keterbatasan ini tidak relevan untuk platform target.
+    \item \textbf{Estimasi Percabangan}: Untuk kode dengan banyak percabangan kondisional, diperlukan asumsi tentang distribusi jalur eksekusi.
+    \item \textbf{Optimisasi Compiler}: Hasil bergantung pada level optimisasi compiler yang digunakan.
+\end{enumerate}
+
+\subsubsection{Konversi ke Waktu Eksekusi}
+
+Setelah jumlah siklus diperoleh, waktu eksekusi dapat dihitung menggunakan frekuensi clock prosesor:
+
+\begin{equation}
+T_{inference} = \frac{C_{total}}{f_{clock}}
+\label{eq:time-conversion}
+\end{equation}
+
+\noindent dimana $f_{clock} = 25$ MHz untuk MSP430F5529. Sebagai contoh, untuk model dengan $C_{total} = 1.270$ siklus:
+
+\begin{equation}
+T_{inference} = \frac{1.270}{25.000.000} = 50,8 \times 10^{-6} \text{ detik} = 50,8 \text{ }\mu\text{s}
+\end{equation}
+
+Throughput inferensi dapat dihitung sebagai:
+
+\begin{equation}
+\text{Throughput} = \frac{f_{clock}}{C_{total}} = \frac{25.000.000}{1.270} \approx 19.685 \text{ inferensi/detik}
+\label{eq:throughput}
+\end{equation}
+
+Metode \textit{static cycle counting} ini memberikan estimasi yang akurat untuk evaluasi kelayakan deployment model \textit{machine learning} pada mikrokontroler dengan sumber daya terbatas, khususnya dalam konteks aplikasi WSN yang memiliki batasan waktu respons dan konsumsi daya yang ketat.
