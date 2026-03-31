@@ -25,5 +25,6 @@
     "Normal",
     "TDMA"
   ],
-  "feature_engineering": false
+  "feature_engineering": false,
+  "evaluation_method": "Stratified_3-Fold_CV"
 }
